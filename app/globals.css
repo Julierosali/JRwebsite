@@ -1,0 +1,53 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --orange: #e07c4a;
+  --orange-light: #f4a574;
+  --blue: #2d5a7b;
+  --blue-light: #4a8bb8;
+  --violet: #6b4e9e;
+  --violet-light: #8b6bb8;
+  --white: #ffffff;
+  --sand: #d4a574;
+}
+
+body {
+  font-family: var(--font-body), sans-serif;
+}
+
+.bg-gradient {
+  background: linear-gradient(135deg, #1a3a52 0%, #2d5a7b 25%, #e07c4a 70%, #c96538 100%);
+  background-attachment: fixed;
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+/* Scroll smooth pour ancres */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Bandeau violet (accent) - opacité réduite */
+.bg-accent {
+  background-color: rgba(107, 78, 158, 0.72);
+}
+
+/* Galerie portrait : défilement horizontal infini (boucle fluide) */
+@keyframes portrait-scroll {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+.bg-accent-solid {
+  background-color: #6b4e9e;
+}
