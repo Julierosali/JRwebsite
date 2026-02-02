@@ -50,6 +50,8 @@ export function EditSectionModal({ section, onClose, onSave }: EditSectionModalP
     const c = content as Record<string, unknown>;
 
     if (key === 'header') {
+      const focusX = typeof c.focusX === 'number' ? c.focusX : 50;
+      const focusY = typeof c.focusY === 'number' ? c.focusY : 50;
       return (
         <>
           <label className="block text-sm font-medium">Titre</label>
@@ -67,11 +69,43 @@ export function EditSectionModal({ section, onClose, onSave }: EditSectionModalP
             className="mt-1 w-full rounded border border-white/30 bg-black/30 px-3 py-2 text-white"
           />
           <ImageUploadField
-            label="Logo (optionnel)"
+            label="Image (optionnel)"
             value={(c.logoUrl as string) ?? ''}
             onChange={(url) => update('logoUrl', url)}
             pathPrefix="header"
           />
+          {(c.logoUrl as string) ? (
+            <>
+              <p className="mt-4 text-sm font-medium">Point de focus de l&apos;image</p>
+              <p className="mt-1 text-xs text-white/70">
+                Définissez quelle partie de l&apos;image reste visible (0 = gauche/haut, 100 = droite/bas, 50 = centre).
+              </p>
+              <div className="mt-2 grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs text-white/70">Horizontal (X) %</label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={focusX}
+                    onChange={(e) => update('focusX', Number(e.target.value) || 50)}
+                    className="mt-1 w-full rounded border border-white/30 bg-black/30 px-3 py-2 text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-white/70">Vertical (Y) %</label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={focusY}
+                    onChange={(e) => update('focusY', Number(e.target.value) || 50)}
+                    className="mt-1 w-full rounded border border-white/30 bg-black/30 px-3 py-2 text-white"
+                  />
+                </div>
+              </div>
+            </>
+          ) : null}
         </>
       );
     }

@@ -48,7 +48,7 @@ function ClipCard({ video: v, index }: { video: VideoItem; index: number }) {
           Vidéo à venir
         </div>
       )}
-      {v.title ? <p className="font-anton p-3 text-center font-medium">{v.title}</p> : null}
+      {v.title ? <p className="font-title p-3 text-center font-medium">{v.title}</p> : null}
     </motion.div>
   );
 }

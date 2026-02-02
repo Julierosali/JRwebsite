@@ -35,7 +35,7 @@ export function Nav({ visibleSectionKeys }: NavProps) {
           <li key={item.href}>
             <Link
               href={item.href}
-              className="font-anton block rounded px-3 py-2 text-sm font-medium text-white transition hover:bg-violet/60 md:text-base"
+              className="font-title block rounded px-3 py-2 text-sm font-medium text-white transition hover:bg-violet/60 md:text-base"
             >
               {item.label}
             </Link>

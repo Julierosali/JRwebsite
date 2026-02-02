@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Anton, Source_Sans_3 } from 'next/font/google';
+import { Anton, Source_Sans_3, Playfair_Display, Lora } from 'next/font/google';
 import { AdminProvider } from '@/context/AdminContext';
 import './globals.css';
 
@@ -12,7 +12,19 @@ const anton = Anton({
 
 const sourceSans = Source_Sans_3({
   subsets: ['latin'],
-  variable: '--font-body',
+  variable: '--font-source-sans',
+  display: 'swap',
+});
+
+const playfairDisplay = Playfair_Display({
+  subsets: ['latin'],
+  variable: '--font-playfair-display',
+  display: 'swap',
+});
+
+const lora = Lora({
+  subsets: ['latin'],
+  variable: '--font-lora',
   display: 'swap',
 });
 
@@ -27,7 +39,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="fr" className={`${anton.variable} ${sourceSans.variable}`}>
+    <html lang="fr" className={`${anton.variable} ${sourceSans.variable} ${playfairDisplay.variable} ${lora.variable}`}>
       <body className="font-body antialiased bg-gradient min-h-screen text-white">
         <AdminProvider>
           {children}

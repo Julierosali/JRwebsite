@@ -6,6 +6,9 @@ import {
   DEFAULT_GRADIENT,
   DEFAULT_ACCENT_COLOR,
   DEFAULT_ACCENT_OPACITY,
+  TITLE_FONT_DEFAULT,
+  BODY_FONT_DEFAULT,
+  FONT_OPTIONS,
   buildGradientFromColors,
   type StyleContent,
 } from '@/lib/style';
@@ -58,6 +61,8 @@ export function EditStyleModal({ section, onClose, onSave }: EditStyleModalProps
       backgroundGradient: finalGradient,
       backgroundColors: colors,
       backgroundAngle: angle,
+      titleFont: content.titleFont ?? TITLE_FONT_DEFAULT,
+      bodyFont: content.bodyFont ?? BODY_FONT_DEFAULT,
     };
     await onSave(section.id, toSave as Record<string, unknown>);
     setSaving(false);
@@ -113,6 +118,44 @@ export function EditStyleModal({ section, onClose, onSave }: EditStyleModalProps
           >
             Appliquer ce dégradé
           </button>
+        </div>
+
+        {/* Polices */}
+        <div className="mt-6 border-b border-white/20 pb-4">
+          <p className="mb-2 font-medium">Polices</p>
+          <p className="mb-3 text-xs text-white/70">
+            Police des titres et sous-titres, puis police des paragraphes.
+          </p>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label className="block text-xs text-white/70">Titres / sous-titres</label>
+              <select
+                value={content.titleFont ?? TITLE_FONT_DEFAULT}
+                onChange={(e) => update({ titleFont: e.target.value || undefined })}
+                className="mt-1 w-full rounded border border-white/30 bg-black/30 px-3 py-2 text-white"
+              >
+                {FONT_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs text-white/70">Paragraphes</label>
+              <select
+                value={content.bodyFont ?? BODY_FONT_DEFAULT}
+                onChange={(e) => update({ bodyFont: e.target.value || undefined })}
+                className="mt-1 w-full rounded border border-white/30 bg-black/30 px-3 py-2 text-white"
+              >
+                {FONT_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
         </div>
 
         {/* Couleur globale des blocs */}

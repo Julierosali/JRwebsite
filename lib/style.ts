@@ -6,12 +6,25 @@ export const DEFAULT_GRADIENT = 'linear-gradient(135deg, #1a3a52 0%, #2d5a7b 25%
 export const DEFAULT_ACCENT_COLOR = '#6b4e9e';
 export const DEFAULT_ACCENT_OPACITY = 0.72;
 
+/** Clés de polices utilisées pour --font-xxx dans le layout (voir app/layout.tsx). */
+export const TITLE_FONT_DEFAULT = 'anton';
+export const BODY_FONT_DEFAULT = 'source_sans';
+
+export const FONT_OPTIONS = [
+  { value: 'anton', label: 'Anton' },
+  { value: 'source_sans', label: 'Source Sans 3' },
+  { value: 'playfair_display', label: 'Playfair Display' },
+  { value: 'lora', label: 'Lora' },
+] as const;
+
 export type StyleContent = {
   backgroundGradient?: string;
   backgroundAngle?: number;
   backgroundColors?: [string, string, string, string];
   accentColor?: string;
   accentOpacity?: number;
+  titleFont?: string;
+  bodyFont?: string;
   blocks?: Record<string, { color?: string; opacity?: number }>;
 };
 

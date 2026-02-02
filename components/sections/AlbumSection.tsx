@@ -51,7 +51,7 @@ export function AlbumSection({
       visible={visible}
     >
       <div className="mx-auto max-w-5xl px-4 py-12 md:py-16">
-<h2 className="font-anton mb-6 text-center text-3xl font-bold tracking-wide md:text-4xl">
+<h2 className="font-title mb-6 text-center text-3xl font-bold tracking-wide md:text-4xl">
         {content?.title ?? 'Nouvel album'}
         </h2>
         <Link href={`/album/${slug}`} className="block">
@@ -77,8 +77,8 @@ export function AlbumSection({
               )}
             </div>
             <div className="mt-6 md:mt-0">
-              <h3 className="font-anton text-2xl font-bold md:text-3xl">{content?.albumTitle ?? 'LIBRE'}</h3>
-              <p className="font-anton mt-2 text-white/90 whitespace-pre-line">{content?.subtitle ?? '11 titres, deux univers'}</p>
+              <h3 className="font-title text-2xl font-bold md:text-3xl">{content?.albumTitle ?? 'LIBRE'}</h3>
+              <p className="font-title mt-2 text-white/90 whitespace-pre-line">{content?.subtitle ?? '11 titres, deux univers'}</p>
               <p className="mt-4 text-sm text-white/80 line-clamp-3 whitespace-pre-line">{content?.description ?? ''}</p>
               <span className="mt-4 inline-block rounded border border-white/60 px-4 py-2 text-sm font-medium transition hover:bg-white/20">
                 Découvrir l&apos;album →

@@ -47,7 +47,7 @@ export function PlayerSection({
       visible={visible}
     >
       <div className="mx-auto max-w-4xl px-4 pt-12 pb-4 md:pt-16 md:pb-6">
-        <h2 className="font-anton mb-6 text-center text-3xl font-bold tracking-wide md:text-4xl">
+        <h2 className="font-title mb-6 text-center text-3xl font-bold tracking-wide md:text-4xl">
           {content?.title ?? 'Écouter'}
         </h2>
         {src ? (

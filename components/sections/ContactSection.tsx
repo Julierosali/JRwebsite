@@ -54,7 +54,7 @@ export function ContactSection({
       visible={visible}
     >
       <div className="mx-auto max-w-5xl px-4 py-12 md:py-16">
-        <h2 className="font-anton mb-8 text-center text-3xl font-bold tracking-wide md:text-4xl">
+        <h2 className="font-title mb-8 text-center text-3xl font-bold tracking-wide md:text-4xl">
           {content?.title ?? 'Contact'}
         </h2>
         <motion.div

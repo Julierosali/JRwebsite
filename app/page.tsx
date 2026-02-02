@@ -61,7 +61,11 @@ export default function HomePage() {
     <>
       <StyleInjector styleContent={(styleSection?.content ?? undefined) as import('@/lib/style').StyleContent | undefined} />
       {headerSection?.visible !== false && (
-        <Header content={(headerSection?.content ?? {}) as { title?: string; subtitle?: string; logoUrl?: string }} />
+        <Header
+          content={
+            (headerSection?.content ?? {}) as import('@/components/Header').HeaderContent
+          }
+        />
       )}
       <Nav visibleSectionKeys={visibleMenuKeys} />
       {isAdmin && (

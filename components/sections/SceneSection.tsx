@@ -68,14 +68,14 @@ export function SceneSection({
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
               transition={{ delay: 0.2 }}
-              className="font-anton mb-3 inline-block w-fit rounded-full border border-white/50 bg-white/10 px-4 py-1.5 text-xs uppercase tracking-widest text-white/90"
+              className="font-title mb-3 inline-block w-fit rounded-full border border-white/50 bg-white/10 px-4 py-1.5 text-xs uppercase tracking-widest text-white/90"
             >
               Prestations scène
             </motion.span>
-            <h2 className="font-anton mb-2 text-3xl font-bold tracking-tight md:text-4xl lg:text-5xl">
+            <h2 className="font-title mb-2 text-3xl font-bold tracking-tight md:text-4xl lg:text-5xl">
               {title}
             </h2>
-            <p className="font-anton mb-4 text-lg text-white/90 whitespace-pre-line">{subtitle}</p>
+            <p className="font-title mb-4 text-lg text-white/90 whitespace-pre-line">{subtitle}</p>
             <p className="font-body mb-8 max-w-lg text-white/95 leading-relaxed whitespace-pre-line">
               {body}
             </p>
@@ -87,7 +87,7 @@ export function SceneSection({
             >
               <Link
                 href="#contact"
-                className="font-anton inline-flex w-fit items-center gap-2 rounded-full border-2 border-white/90 bg-white/15 px-6 py-3 text-base font-medium transition hover:bg-white/30 hover:border-white hover:scale-[1.02]"
+                className="font-title inline-flex w-fit items-center gap-2 rounded-full border-2 border-white/90 bg-white/15 px-6 py-3 text-base font-medium transition hover:bg-white/30 hover:border-white hover:scale-[1.02]"
               >
                 {ctaText}
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>

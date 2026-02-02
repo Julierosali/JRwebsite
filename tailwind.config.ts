@@ -11,6 +11,7 @@ const config: Config = {
       fontFamily: {
         anton: ['var(--font-anton)', 'sans-serif'],
         body: ['var(--font-body)', 'sans-serif'],
+        title: ['var(--font-title)', 'sans-serif'],
       },
       colors: {
         orange: {

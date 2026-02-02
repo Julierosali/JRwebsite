@@ -11,6 +11,9 @@
   --violet-light: #8b6bb8;
   --white: #ffffff;
   --sand: #d4a574;
+  /* Polices titres / paragraphes (modifiables via Style) */
+  --font-title: var(--font-anton);
+  --font-body: var(--font-source-sans);
 }
 
 body {
