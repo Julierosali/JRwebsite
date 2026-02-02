@@ -12,12 +12,18 @@ export function getSpotifyEmbedUrl(urlOrId: string): string {
   let type = 'playlist';
   let id = '';
 
+  const allowed = ['playlist', 'track', 'album', 'artist'];
+
   if (s.startsWith('http')) {
     try {
       const url = new URL(s);
       const pathParts = url.pathname.split('/').filter(Boolean);
-      // open.spotify.com/playlist/xxx -> ["playlist", "xxx"] (ignorer slash final ou query)
-      if (pathParts.length >= 2) {
+      // open.spotify.com/playlist/xxx ou open.spotify.com/intl-fr/track/xxx
+      const typeIndex = pathParts.findIndex((p) => allowed.includes(p));
+      if (typeIndex !== -1 && pathParts.length > typeIndex + 1) {
+        type = pathParts[typeIndex];
+        id = pathParts[typeIndex + 1];
+      } else if (pathParts.length >= 2) {
         type = pathParts[0];
         id = pathParts[1];
       } else if (pathParts.length === 1) {
@@ -31,7 +37,6 @@ export function getSpotifyEmbedUrl(urlOrId: string): string {
   }
 
   if (!id) return '';
-  const allowed = ['playlist', 'track', 'album', 'artist'];
   if (!allowed.includes(type)) type = 'playlist';
   return `https://open.spotify.com/embed/${type}/${id}?utm_source=generator&theme=0`;
 }
