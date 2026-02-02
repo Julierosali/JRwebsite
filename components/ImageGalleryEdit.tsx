@@ -41,9 +41,11 @@ export function ImageGalleryEdit({ images, onChange, pathPrefix }: ImageGalleryE
     onChange(images.filter((_, i) => i !== index));
   };
 
-  const setAlt = (index: number, alt: string) => {
+  const move = (index: number, direction: 'up' | 'down') => {
     const next = [...images];
-    next[index] = { ...next[index], alt };
+    const j = direction === 'up' ? index - 1 : index + 1;
+    if (j < 0 || j >= next.length) return;
+    [next[index], next[j]] = [next[j], next[index]];
     onChange(next);
   };
 
@@ -67,10 +69,10 @@ export function ImageGalleryEdit({ images, onChange, pathPrefix }: ImageGalleryE
       </button>
       {error && <p className="mt-2 text-sm text-red-300">{error}</p>}
       {images.length > 0 && (
-        <ul className="mt-4 space-y-4">
+        <ul className="mt-4 grid grid-cols-3 gap-2">
           {images.map((img, i) => (
-            <li key={i} className="flex flex-wrap items-start gap-3 rounded border border-white/20 bg-black/20 p-3">
-              <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded bg-black/30">
+            <li key={i} className="flex flex-col items-center gap-1 rounded border border-white/20 bg-black/20 p-1.5">
+              <div className="relative h-14 w-full overflow-hidden rounded bg-black/30" style={{ aspectRatio: '1' }}>
                 <Image
                   src={img.url}
                   alt={img.alt ?? ''}
@@ -80,22 +82,33 @@ export function ImageGalleryEdit({ images, onChange, pathPrefix }: ImageGalleryE
                   unoptimized={img.url.includes('supabase.co')}
                 />
               </div>
-              <div className="min-w-0 flex-1">
-                <input
-                  type="text"
-                  value={img.alt ?? ''}
-                  onChange={(e) => setAlt(i, e.target.value)}
-                  placeholder="Description (optionnel)"
-                  className="w-full rounded border border-white/30 bg-black/30 px-2 py-1 text-sm text-white"
-                />
+              <div className="flex items-center gap-0.5">
+                <button
+                  type="button"
+                  disabled={i === 0}
+                  onClick={() => move(i, 'up')}
+                  className="rounded border border-white/30 bg-white/10 px-1.5 py-0.5 text-xs disabled:opacity-40"
+                  title="Monter"
+                >
+                  ↑
+                </button>
+                <button
+                  type="button"
+                  disabled={i === images.length - 1}
+                  onClick={() => move(i, 'down')}
+                  className="rounded border border-white/30 bg-white/10 px-1.5 py-0.5 text-xs disabled:opacity-40"
+                  title="Descendre"
+                >
+                  ↓
+                </button>
+                <button
+                  type="button"
+                  onClick={() => remove(i)}
+                  className="rounded border border-red-400/50 bg-red-900/20 px-1.5 py-0.5 text-xs text-red-200 hover:bg-red-900/40"
+                >
+                  Suppr.
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => remove(i)}
-                className="rounded border border-red-400/50 bg-red-900/20 px-2 py-1 text-xs text-red-200 hover:bg-red-900/40"
-              >
-                Supprimer
-              </button>
             </li>
           ))}
         </ul>

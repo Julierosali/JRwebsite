@@ -40,3 +40,17 @@ export function getSpotifyEmbedUrl(urlOrId: string): string {
   if (!allowed.includes(type)) type = 'playlist';
   return `https://open.spotify.com/embed/${type}/${id}?utm_source=generator&theme=0`;
 }
+
+/** Détecte le type de lien d'écoute (Spotify ou SoundCloud) à partir d'une URL. */
+export function getListenLinkType(url: string): 'spotify' | 'soundcloud' | null {
+  const s = (url ?? '').trim();
+  if (!s) return null;
+  try {
+    const u = new URL(s.startsWith('http') ? s : `https://${s}`);
+    if (u.hostname.includes('spotify.com')) return 'spotify';
+    if (u.hostname.includes('soundcloud.com')) return 'soundcloud';
+  } catch {
+    // ignore
+  }
+  return null;
+}

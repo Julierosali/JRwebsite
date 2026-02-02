@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Anton, Source_Sans_3, Playfair_Display, Lora } from 'next/font/google';
 import { AdminProvider } from '@/context/AdminContext';
+import { getSeoSettings } from '@/lib/seo';
 import './globals.css';
 
 const anton = Anton({
@@ -28,10 +29,14 @@ const lora = Lora({
   display: 'swap',
 });
 
-export const metadata: Metadata = {
-  title: 'Julie Rosali | Artiste - Auteure-compositrice-interprète',
-  description: 'Julie Rosali, artiste française indépendante. Chanson française, pop émotionnelle et influences latines.',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const globalSeo = await getSeoSettings('_global');
+  return {
+    icons: globalSeo?.favicon_url ? { icon: globalSeo.favicon_url } : undefined,
+    title: { default: 'Julie Rosali | Artiste - Auteure-compositrice-interprète', template: '%s | Julie Rosali' },
+    description: 'Julie Rosali, artiste française indépendante. Chanson française, pop émotionnelle et influences latines.',
+  };
+}
 
 export default function RootLayout({
   children,

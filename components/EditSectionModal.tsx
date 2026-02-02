@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { Section } from '@/lib/supabase';
-import { getYoutubeIdFromUrl, youtubeIdToUrl } from '@/lib/youtube';
 import { parseVideoUrl, toStoredVideoValue, toDisplayUrl } from '@/lib/video';
 import { ImageUploadField } from '@/components/ImageUploadField';
 import { ImageGalleryEdit } from '@/components/ImageGalleryEdit';
@@ -11,9 +10,11 @@ type EditSectionModalProps = {
   section: Section | null;
   onClose: () => void;
   onSave: (id: string, content: Record<string, unknown>) => Promise<void>;
+  /** Titre du modal (ex. "Album" depuis la page album). */
+  title?: string;
 };
 
-export function EditSectionModal({ section, onClose, onSave }: EditSectionModalProps) {
+export function EditSectionModal({ section, onClose, onSave, title: titleOverride }: EditSectionModalProps) {
   const [content, setContent] = useState<Record<string, unknown>>({});
   const [saving, setSaving] = useState(false);
 
@@ -145,10 +146,9 @@ export function EditSectionModal({ section, onClose, onSave }: EditSectionModalP
     }
 
     if (key === 'album') {
-      const ap = (c.albumPage as Record<string, unknown>) ?? {};
-      const buttons = (ap.buttons as { label: string; url: string }[]) ?? [];
       return (
         <>
+          <p className="mb-4 text-sm text-white/70">Carte Album sur la page d&apos;accueil (titre, pochette, lien vers la page).</p>
           <label className="block text-sm font-medium">Titre section</label>
           <input
             type="text"
@@ -190,91 +190,6 @@ export function EditSectionModal({ section, onClose, onSave }: EditSectionModalP
             rows={3}
             className="mt-1 w-full rounded border border-white/30 bg-black/30 px-3 py-2 text-white"
           />
-          <div className="mt-6 border-t border-white/20 pt-4">
-            <p className="text-sm font-medium text-white/80">Page album (détail)</p>
-            <label className="mt-2 block text-sm font-medium">Date de sortie</label>
-            <input
-              type="text"
-              value={String(ap.releaseDate ?? '')}
-              onChange={(e) => update('albumPage', { ...ap, releaseDate: e.target.value })}
-              className="mt-1 w-full rounded border border-white/30 bg-black/30 px-3 py-2 text-white"
-              placeholder="16 septembre 2024"
-            />
-            <label className="mt-2 block text-sm font-medium">Artiste</label>
-            <input
-              type="text"
-              value={String(ap.artist ?? '')}
-              onChange={(e) => update('albumPage', { ...ap, artist: e.target.value })}
-              className="mt-1 w-full rounded border border-white/30 bg-black/30 px-3 py-2 text-white"
-            />
-            <label className="mt-2 block text-sm font-medium">Label</label>
-            <input
-              type="text"
-              value={String(ap.label ?? '')}
-              onChange={(e) => update('albumPage', { ...ap, label: e.target.value })}
-              className="mt-1 w-full rounded border border-white/30 bg-black/30 px-3 py-2 text-white"
-            />
-            <label className="mt-2 block text-sm font-medium">URL vidéo YouTube (page album)</label>
-            <input
-              type="url"
-              value={youtubeIdToUrl(String(ap.youtubeEmbedId ?? ''))}
-              onChange={(e) => update('albumPage', { ...ap, youtubeEmbedId: getYoutubeIdFromUrl(e.target.value) })}
-              className="mt-1 w-full rounded border border-white/30 bg-black/30 px-3 py-2 text-white"
-              placeholder="https://www.youtube.com/watch?v=..."
-            />
-            <label className="mt-2 block text-sm font-medium">URL SoundCloud (page album)</label>
-            <input
-              type="text"
-              value={(ap.soundcloudEmbedUrl as string) ?? ''}
-              onChange={(e) => update('albumPage', { ...ap, soundcloudEmbedUrl: e.target.value })}
-              className="mt-1 w-full rounded border border-white/30 bg-black/30 px-3 py-2 text-white"
-              placeholder="https://soundcloud.com/..."
-            />
-            <p className="mt-4 text-sm font-medium text-white/80">Boutons sous la pochette (libellé + lien)</p>
-            {buttons.map((btn, i) => (
-              <div key={i} className="mt-2 flex flex-wrap gap-2 rounded border border-white/20 p-3">
-                <input
-                  type="text"
-                  value={btn.label ?? ''}
-                  onChange={(e) => {
-                    const next = [...buttons];
-                    next[i] = { ...next[i], label: e.target.value };
-                    update('albumPage', { ...ap, buttons: next });
-                  }}
-                  placeholder="Libellé"
-                  className="flex-1 min-w-[120px] rounded border border-white/30 bg-black/30 px-2 py-1.5 text-sm text-white"
-                />
-                <input
-                  type="url"
-                  value={btn.url ?? ''}
-                  onChange={(e) => {
-                    const next = [...buttons];
-                    next[i] = { ...next[i], url: e.target.value };
-                    update('albumPage', { ...ap, buttons: next });
-                  }}
-                  placeholder="https://..."
-                  className="flex-1 min-w-[160px] rounded border border-white/30 bg-black/30 px-2 py-1.5 text-sm text-white"
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    const next = buttons.filter((_, j) => j !== i);
-                    update('albumPage', { ...ap, buttons: next });
-                  }}
-                  className="rounded border border-red-400/50 bg-red-900/20 px-2 py-1 text-xs text-red-200 hover:bg-red-900/40"
-                >
-                  Supprimer
-                </button>
-              </div>
-            ))}
-            <button
-              type="button"
-              onClick={() => update('albumPage', { ...ap, buttons: [...buttons, { label: '', url: '' }] })}
-              className="mt-2 rounded border border-white/40 bg-white/10 px-3 py-2 text-sm font-medium transition hover:bg-white/20"
-            >
-              + Ajouter un bouton
-            </button>
-          </div>
         </>
       );
     }
@@ -592,7 +507,7 @@ export function EditSectionModal({ section, onClose, onSave }: EditSectionModalP
         className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl bg-blue/95 p-6 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="text-xl font-bold">Modifier : {section.key}</h3>
+        <h3 className="text-xl font-bold">{titleOverride ?? `Modifier : ${section.key}`}</h3>
         <div className="mt-6">{renderFields()}</div>
         <div className="mt-8 flex justify-end gap-3">
           <button
