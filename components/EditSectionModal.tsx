@@ -52,6 +52,8 @@ export function EditSectionModal({ section, onClose, onSave }: EditSectionModalP
     if (key === 'header') {
       const focusX = typeof c.focusX === 'number' ? c.focusX : 50;
       const focusY = typeof c.focusY === 'number' ? c.focusY : 50;
+      const overlayColor = (c.overlayColor as string) ?? '#000000';
+      const overlayOpacity = typeof c.overlayOpacity === 'number' ? c.overlayOpacity : 0.3;
       return (
         <>
           <label className="block text-sm font-medium">Titre</label>
@@ -74,6 +76,38 @@ export function EditSectionModal({ section, onClose, onSave }: EditSectionModalP
             onChange={(url) => update('logoUrl', url)}
             pathPrefix="header"
           />
+          <div className="mt-4 border-t border-white/20 pt-4">
+            <p className="text-sm font-medium">Superposition sur la bannière</p>
+            <p className="mt-1 text-xs text-white/70">
+              Couleur et opacité de la couche au-dessus de l&apos;image (pour améliorer la lisibilité du texte).
+            </p>
+            <div className="mt-3 flex flex-wrap items-end gap-4">
+              <div>
+                <label className="block text-xs text-white/70">Couleur</label>
+                <input
+                  type="color"
+                  value={overlayColor}
+                  onChange={(e) => update('overlayColor', e.target.value)}
+                  className="mt-1 h-10 w-24 cursor-pointer rounded border border-white/30 bg-black/30"
+                />
+              </div>
+              <div className="min-w-[120px] flex-1">
+                <label className="block text-xs text-white/70">Opacité (0–1)</label>
+                <input
+                  type="number"
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  value={overlayOpacity}
+                  onChange={(e) => {
+                  const v = Number(e.target.value);
+                  update('overlayOpacity', Number.isNaN(v) ? 0.3 : Math.min(1, Math.max(0, v)));
+                }}
+                  className="mt-1 w-full rounded border border-white/30 bg-black/30 px-3 py-2 text-white"
+                />
+              </div>
+            </div>
+          </div>
           {(c.logoUrl as string) ? (
             <>
               <p className="mt-4 text-sm font-medium">Point de focus de l&apos;image</p>
