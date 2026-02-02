@@ -45,7 +45,7 @@ export function PresentationSection({
       visible={visible}
     >
       <div className="relative mx-auto max-w-6xl px-4 py-12 md:py-20">
-        <div className="overflow-hidden rounded-xl bg-accent shadow-2xl md:grid md:grid-cols-2 md:gap-0">
+        <div className="overflow-hidden rounded-xl bg-accent shadow-2xl md:grid md:grid-cols-2 md:gap-0" data-block="presentation">
           <div className="p-8 md:p-10">
             <h2 className="font-anton mb-6 text-3xl font-bold tracking-wide md:text-4xl">
               {content?.title ?? "L'UNIVERS"}

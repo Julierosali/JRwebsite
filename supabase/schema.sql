@@ -127,5 +127,6 @@ INSERT INTO public.sections (key, sort_order, visible, content) VALUES
   ('contact', 7, true, '{"title":"Contact","body":"","imageUrl":"","email":"julie.rosali@outlook.com","phone":"06 46 63 98 76"}'),
   ('social', 8, true, '{"links":[{"platform":"instagram","url":""},{"platform":"tiktok","url":""},{"platform":"facebook","url":""},{"platform":"x","url":""}]}'),
   ('streaming', 9, true, '{"links":[{"platform":"spotify","url":""},{"platform":"deezer","url":""},{"platform":"youtube","url":""},{"platform":"soundcloud","url":""},{"platform":"amazon","url":""}]}'),
-  ('footer', 10, true, '{"text":"Copyright ©2026 Julie Rosali | Tous droits réservés."}')
+  ('footer', 10, true, '{"text":"Copyright ©2026 Julie Rosali | Tous droits réservés."}'),
+  ('style', 11, true, '{"backgroundGradient":"linear-gradient(135deg, #1a3a52 0%, #2d5a7b 25%, #e07c4a 70%, #c96538 100%)","backgroundAngle":135,"backgroundColors":["#1a3a52","#2d5a7b","#e07c4a","#c96538"],"accentColor":"#6b4e9e","accentOpacity":0.72,"blocks":{}}')
 ON CONFLICT (key) DO UPDATE SET sort_order = EXCLUDED.sort_order;

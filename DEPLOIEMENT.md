@@ -1,5 +1,17 @@
 # Déploiement en production (Vercel)
 
+## Mise en prod rapide (repo déjà sur GitHub)
+
+1. Va sur **[vercel.com/new](https://vercel.com/new)** et connecte-toi.
+2. **Import Git Repository** → choisis **Julierosali/JRwebsite** (ou connecte GitHub si besoin).
+3. **Configure Project** : garde les réglages par défaut (Framework: Next.js).
+4. **Environment Variables** : ajoute avant de déployer :
+   - `NEXT_PUBLIC_SUPABASE_URL` = `https://xnldksrwfsfxgemzkfrs.supabase.co`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY` = *(copie depuis ton `.env.local`)*
+5. Clique sur **Deploy**. Quand c’est terminé, ton site est en ligne sur `https://jrwebsite-xxx.vercel.app` (ou un nom similaire).
+
+---
+
 ## 1. Prérequis
 
 - Compte [Vercel](https://vercel.com)

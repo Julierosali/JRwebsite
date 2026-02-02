@@ -59,6 +59,7 @@ export function AlbumSection({
             whileHover={{ scale: 1.02 }}
             transition={{ type: 'spring', stiffness: 300 }}
             className="overflow-hidden rounded-lg bg-accent p-6 shadow-xl md:flex md:items-center md:gap-8"
+            data-block="album"
           >
             <div className="relative mx-auto aspect-square w-64 shrink-0 overflow-hidden rounded-lg bg-white/10 md:w-72">
               {coverUrl ? (

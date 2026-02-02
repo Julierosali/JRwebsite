@@ -1,32 +1,50 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase, Section } from '@/lib/supabase';
+
+const FETCH_TIMEOUT_MS = 6000;
 
 export function useSections() {
   const [sections, setSections] = useState<Section[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const fetchDoneRef = useRef(false);
 
   const fetch = useCallback(async () => {
     setLoading(true);
     setError(null);
+    fetchDoneRef.current = false;
+    const timeoutId = window.setTimeout(() => {
+      if (!fetchDoneRef.current) {
+        fetchDoneRef.current = true;
+        setLoading(false);
+      }
+    }, FETCH_TIMEOUT_MS);
     try {
       const { data, error: e } = await supabase
         .from('sections')
         .select('*')
         .order('sort_order', { ascending: true });
-      if (e) {
-        setError(e as Error);
-        setSections([]);
-      } else {
-        setSections((data as Section[]) ?? []);
+      if (!fetchDoneRef.current) {
+        fetchDoneRef.current = true;
+        clearTimeout(timeoutId);
+        if (e) {
+          setError(e as Error);
+          setSections([]);
+        } else {
+          setSections((data as Section[]) ?? []);
+        }
+        setLoading(false);
       }
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('Erreur de chargement'));
-      setSections([]);
-    } finally {
-      setLoading(false);
+      if (!fetchDoneRef.current) {
+        fetchDoneRef.current = true;
+        clearTimeout(timeoutId);
+        setError(err instanceof Error ? err : new Error('Erreur de chargement'));
+        setSections([]);
+        setLoading(false);
+      }
     }
   }, []);
 

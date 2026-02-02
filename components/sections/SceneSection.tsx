@@ -59,6 +59,7 @@ export function SceneSection({
           viewport={{ once: true, margin: '-80px' }}
           transition={{ duration: 0.55, ease: 'easeOut' }}
           className="overflow-hidden rounded-2xl bg-accent shadow-2xl md:grid md:grid-cols-12"
+          data-block="scene"
         >
           {/* Texte + CTA */}
           <div className="relative z-10 flex flex-col justify-center p-8 md:col-span-6 md:p-10 lg:p-12">

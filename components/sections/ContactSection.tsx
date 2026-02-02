@@ -62,6 +62,7 @@ export function ContactSection({
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           className="overflow-hidden rounded-xl bg-accent p-8 shadow-xl md:grid md:grid-cols-2 md:gap-8"
+          data-block="contact"
         >
           <div>
             {content?.body ? <p className="mb-6 font-body text-white/95 whitespace-pre-line">{content.body}</p> : null}

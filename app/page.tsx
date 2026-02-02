@@ -15,6 +15,8 @@ import { SceneSection } from '@/components/sections/SceneSection';
 import { PortraitSection } from '@/components/sections/PortraitSection';
 import { ContactSection } from '@/components/sections/ContactSection';
 import { EditSectionModal } from '@/components/EditSectionModal';
+import { EditStyleModal } from '@/components/EditStyleModal';
+import { StyleInjector } from '@/components/StyleInjector';
 import { Section } from '@/lib/supabase';
 
 const SECTION_KEYS_IN_MENU = ['album', 'presentation', 'player', 'scene', 'portrait', 'contact'];
@@ -23,6 +25,7 @@ export default function HomePage() {
   const { sections, loading, updateSection, moveSection } = useSections();
   const { isAdmin } = useAdmin();
   const [editingSection, setEditingSection] = useState<Section | null>(null);
+  const [editingStyleSection, setEditingStyleSection] = useState<Section | null>(null);
 
   const sectionsByKey = useMemo(() => {
     const map: Record<string, Section> = {};
@@ -48,6 +51,7 @@ export default function HomePage() {
   const footerSection = sectionsByKey['footer'];
   const socialSection = sectionsByKey['social'];
   const streamingSection = sectionsByKey['streaming'];
+  const styleSection = sectionsByKey['style'];
 
   const visibleMenuKeys = sections
     .filter((s) => SECTION_KEYS_IN_MENU.includes(s.key) && s.visible !== false)
@@ -55,6 +59,7 @@ export default function HomePage() {
 
   return (
     <>
+      <StyleInjector styleContent={(styleSection?.content ?? undefined) as import('@/lib/style').StyleContent | undefined} />
       {headerSection?.visible !== false && (
         <Header content={(headerSection?.content ?? {}) as { title?: string; subtitle?: string; logoUrl?: string }} />
       )}
@@ -103,11 +108,20 @@ export default function HomePage() {
               Streaming
             </button>
           )}
+          {styleSection && (
+            <button
+              type="button"
+              onClick={() => setEditingStyleSection(styleSection)}
+              className="rounded bg-white/20 px-3 py-2 text-sm hover:bg-white/30"
+            >
+              Style
+            </button>
+          )}
         </div>
       )}
 
       {sections
-        .filter((s) => !['header', 'footer', 'social', 'streaming'].includes(s.key))
+        .filter((s) => !['header', 'footer', 'social', 'streaming', 'style'].includes(s.key))
         .map((section, index, arr) => {
           const canMoveUp = index > 0;
           const canMoveDown = index < arr.length - 1;
@@ -235,6 +249,13 @@ export default function HomePage() {
         <EditSectionModal
           section={editingSection}
           onClose={() => setEditingSection(null)}
+          onSave={handleSaveSection}
+        />
+      )}
+      {editingStyleSection && (
+        <EditStyleModal
+          section={editingStyleSection}
+          onClose={() => setEditingStyleSection(null)}
           onSave={handleSaveSection}
         />
       )}
