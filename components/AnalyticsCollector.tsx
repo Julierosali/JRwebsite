@@ -100,19 +100,24 @@ async function send(
     browser?: string;
   }
 ) {
-  try {
-    await fetch('/api/analytics/collect', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        session_id: sessionId,
-        event_type: eventType,
-        path,
-        ...payload,
-      }),
-    });
-  } catch {
-    // ignore
+    try {
+      const res = await fetch('/api/analytics/collect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          session_id: sessionId,
+          event_type: eventType,
+          path,
+          ...payload,
+        }),
+      });
+      if (!res.ok && typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
+        console.warn('[Analytics] collect API error:', res.status, await res.text());
+      }
+    } catch (err) {
+    if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
+      console.warn('[Analytics] collect failed:', err);
+    }
   }
 }
 

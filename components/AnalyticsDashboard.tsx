@@ -48,11 +48,18 @@ function fetchWithAuth(url: string, options?: RequestInit) {
   });
 }
 
+const PERIOD_OPTIONS = [
+  { value: '7days', label: '7 derniers jours' },
+  { value: '30days', label: '30 derniers jours' },
+  { value: '90days', label: '90 derniers jours' },
+  { value: 'current_month', label: 'Mois en cours' },
+  { value: 'last_month', label: 'Mois précédent' },
+] as const;
+
 export function AnalyticsDashboard({ onClose }: { onClose: () => void }) {
   const { user } = useAdmin();
   const [tab, setTab] = useState<string>('top');
-  const [period, setPeriod] = useState<string>('current_month');
-  const [days, setDays] = useState<string>('');
+  const [periodKey, setPeriodKey] = useState<string>('current_month');
   const [page, setPage] = useState(1);
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -74,8 +81,11 @@ export function AnalyticsDashboard({ onClose }: { onClose: () => void }) {
     setLoading(true);
     setError(null);
     const params = new URLSearchParams();
-    if (days) params.set('days', days);
-    else params.set('period', period);
+    if (periodKey === '7days' || periodKey === '30days' || periodKey === '90days') {
+      params.set('days', periodKey === '7days' ? '7' : periodKey === '30days' ? '30' : '90');
+    } else {
+      params.set('period', periodKey);
+    }
     params.set('page', String(page));
     const res = await fetchWithAuth(`/api/admin/analytics?${params}`);
     if (!res.ok) {
@@ -92,7 +102,7 @@ export function AnalyticsDashboard({ onClose }: { onClose: () => void }) {
       setFilterExcludeHashes((json.filter.excludeHashes || []).join('\n'));
     }
     setLoading(false);
-  }, [user, period, days, page]);
+  }, [user, periodKey, page]);
 
   useEffect(() => {
     load();
@@ -188,21 +198,20 @@ export function AnalyticsDashboard({ onClose }: { onClose: () => void }) {
         <p className="mt-1 text-sm text-white/70">Analytics sans cookies, respectueux de la vie privée.</p>
 
         <div className="mt-4 flex flex-wrap gap-2">
-          <select
-            value={period}
-            onChange={(e) => { setPeriod(e.target.value); setDays(''); setPage(1); }}
-            className="rounded border border-white/30 bg-black/30 px-2 py-1 text-sm text-white"
-          >
-            <option value="current_month">Mois en cours</option>
-            <option value="last_month">Mois dernier</option>
-          </select>
-          <input
-            type="number"
-            placeholder="Jours (ex. 30)"
-            value={days}
-            onChange={(e) => { setDays(e.target.value); setPage(1); }}
-            className="w-24 rounded border border-white/30 bg-black/30 px-2 py-1 text-sm text-white"
-          />
+          <label className="flex items-center gap-2 text-sm text-white/90">
+            Période
+            <select
+              value={periodKey}
+              onChange={(e) => { setPeriodKey(e.target.value); setPage(1); }}
+              className="rounded border border-white/30 bg-black/30 px-3 py-1.5 text-sm text-white"
+            >
+              {PERIOD_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
 
         {error && <p className="mt-2 text-sm text-red-300">{error}</p>}
@@ -232,6 +241,18 @@ export function AnalyticsDashboard({ onClose }: { onClose: () => void }) {
         </div>
 
         {loading && !data && <div className="mt-4 h-12 w-12 animate-spin rounded-full border-4 border-violet border-t-transparent" />}
+
+        {data && data.kpis.uniqueVisitors === 0 && (
+          <div className="mt-4 rounded-lg border border-amber-500/50 bg-amber-900/20 p-4 text-sm text-amber-200">
+            <p className="font-medium">Aucune donnée pour cette période</p>
+            <p className="mt-2 text-white/80">Pour que les visites s’enregistrent :</p>
+            <ul className="mt-2 list-inside list-disc space-y-1 text-white/70">
+              <li><strong>SUPABASE_SERVICE_ROLE_KEY</strong> doit être défini (Vercel → Settings → Environment Variables, ou .env.local en dev)</li>
+              <li>Le schéma analytics doit être exécuté dans Supabase (SQL Editor → supabase/analytics_schema.sql)</li>
+              <li>Visitez le site <strong>déconnecté</strong> (navigation privée ou autre navigateur) : les visites des admins connectés ne sont pas enregistrées</li>
+            </ul>
+          </div>
+        )}
 
         {data && tab !== 'maintenance' && tab !== 'visitors' && (
           <div className="mt-4">
