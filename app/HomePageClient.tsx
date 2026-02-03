@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react';
 import { useSections } from '@/hooks/useSections';
 import { useAdmin } from '@/context/AdminContext';
+import { useLocale } from '@/context/LocaleContext';
 import Link from 'next/link';
 import { Header } from '@/components/Header';
 import { Nav } from '@/components/Nav';
@@ -20,12 +21,15 @@ import { EditSeoModal } from '@/components/EditSeoModal';
 import { AnalyticsDashboard } from '@/components/AnalyticsDashboard';
 import { StyleInjector } from '@/components/StyleInjector';
 import { Section } from '@/lib/supabase';
+import { clampFontSize } from '@/lib/fontSize';
+import { getSectionContent } from '@/lib/locale';
 
 const SECTION_KEYS_IN_MENU = ['album', 'presentation', 'player', 'scene', 'portrait', 'contact'];
 
 export default function HomePageClient() {
   const { sections, loading, updateSection, moveSection } = useSections();
   const { isAdmin } = useAdmin();
+  const { locale } = useLocale();
   const [editingSection, setEditingSection] = useState<Section | null>(null);
   const [editingStyleSection, setEditingStyleSection] = useState<Section | null>(null);
   const [showSeoModal, setShowSeoModal] = useState(false);
@@ -38,6 +42,16 @@ export default function HomePageClient() {
     });
     return map;
   }, [sections]);
+
+  const sectionTitles = useMemo(() => {
+    const out: Record<string, string> = {};
+    for (const s of sections) {
+      if (!SECTION_KEYS_IN_MENU.includes(s.key)) continue;
+      const c = getSectionContent(s.content as Record<string, unknown>, locale) as { title?: string };
+      if (c?.title?.trim()) out[s.key] = c.title.trim();
+    }
+    return out;
+  }, [sections, locale]);
 
   const handleSaveSection = async (id: string, content: Record<string, unknown>) => {
     await updateSection(id, { content });
@@ -61,17 +75,25 @@ export default function HomePageClient() {
     .filter((s) => SECTION_KEYS_IN_MENU.includes(s.key) && s.visible !== false)
     .map((s) => s.key);
 
+  const headerContentResolved = getSectionContent(headerSection?.content as Record<string, unknown>, locale);
+  const headerContentWithSize = {
+    ...headerContentResolved,
+    titleFontSize: clampFontSize(headerContentResolved?.titleFontSize ?? (headerSection?.content as Record<string, unknown>)?.titleFontSize),
+    textFontSize: clampFontSize(headerContentResolved?.textFontSize ?? (headerSection?.content as Record<string, unknown>)?.textFontSize),
+  };
+
+  const styleContentResolved = (styleSection?.content ?? undefined) as import('@/lib/style').StyleContent | undefined;
+  const styleContent = styleContentResolved && typeof styleContentResolved === 'object' && !('fr' in styleContentResolved)
+    ? styleContentResolved
+    : (styleSection?.content as Record<string, unknown>)?.[locale] ?? styleContentResolved;
+
   return (
     <>
-      <StyleInjector styleContent={(styleSection?.content ?? undefined) as import('@/lib/style').StyleContent | undefined} />
+      <StyleInjector styleContent={styleContent as import('@/lib/style').StyleContent | undefined} />
       {headerSection?.visible !== false && (
-        <Header
-          content={
-            (headerSection?.content ?? {}) as import('@/components/Header').HeaderContent
-          }
-        />
+        <Header content={headerContentWithSize as import('@/components/Header').HeaderContent} />
       )}
-      <Nav visibleSectionKeys={visibleMenuKeys} />
+      <Nav visibleSectionKeys={visibleMenuKeys} sectionTitles={sectionTitles} />
       {isAdmin && (
         <div className="sticky top-12 z-40 flex flex-wrap justify-center gap-2 border-b border-white/20 bg-black/40 py-2">
           <Link
@@ -153,12 +175,14 @@ export default function HomePageClient() {
           const moveDown = () => moveSection(index, 'down');
           const toggleVisible = () => updateSection(section.id, { visible: !section.visible });
           const startEdit = () => setEditingSection(section);
+          const rawContent = (section.content ?? {}) as Record<string, unknown>;
+          const contentResolved = getSectionContent(rawContent, locale) as Record<string, unknown>;
 
           if (section.key === 'album') {
             return (
               <AlbumSection
                 key={section.id}
-                content={(section.content ?? {}) as Parameters<typeof AlbumSection>[0]['content']}
+                content={contentResolved as Parameters<typeof AlbumSection>[0]['content']}
                 sectionId={section.id}
                 visible={section.visible}
                 onMoveUp={moveUp}
@@ -174,7 +198,7 @@ export default function HomePageClient() {
             return (
               <PresentationSection
                 key={section.id}
-                content={(section.content ?? {}) as Parameters<typeof PresentationSection>[0]['content']}
+                content={contentResolved as Parameters<typeof PresentationSection>[0]['content']}
                 visible={section.visible}
                 onMoveUp={moveUp}
                 onMoveDown={moveDown}
@@ -189,7 +213,7 @@ export default function HomePageClient() {
             return (
               <PlayerSection
                 key={section.id}
-                content={(section.content ?? {}) as Parameters<typeof PlayerSection>[0]['content']}
+                content={contentResolved as Parameters<typeof PlayerSection>[0]['content']}
                 visible={section.visible}
                 onMoveUp={moveUp}
                 onMoveDown={moveDown}
@@ -204,7 +228,7 @@ export default function HomePageClient() {
             return (
               <ClipsSection
                 key={section.id}
-                content={(section.content ?? {}) as Parameters<typeof ClipsSection>[0]['content']}
+                content={contentResolved as Parameters<typeof ClipsSection>[0]['content']}
                 visible={section.visible}
                 onMoveUp={moveUp}
                 onMoveDown={moveDown}
@@ -219,7 +243,7 @@ export default function HomePageClient() {
             return (
               <SceneSection
                 key={section.id}
-                content={(section.content ?? {}) as Parameters<typeof SceneSection>[0]['content']}
+                content={contentResolved as Parameters<typeof SceneSection>[0]['content']}
                 visible={section.visible}
                 onMoveUp={moveUp}
                 onMoveDown={moveDown}
@@ -234,7 +258,7 @@ export default function HomePageClient() {
             return (
               <PortraitSection
                 key={section.id}
-                content={(section.content ?? {}) as Parameters<typeof PortraitSection>[0]['content']}
+                content={contentResolved as Parameters<typeof PortraitSection>[0]['content']}
                 visible={section.visible}
                 onMoveUp={moveUp}
                 onMoveDown={moveDown}
@@ -246,12 +270,14 @@ export default function HomePageClient() {
             );
           }
           if (section.key === 'contact') {
+            const socialResolved = getSectionContent(socialSection?.content as Record<string, unknown>, locale) as { links?: { platform: string; url: string }[] };
+            const streamingResolved = getSectionContent(streamingSection?.content as Record<string, unknown>, locale) as { links?: { platform: string; url: string }[] };
             return (
               <ContactSection
                 key={section.id}
-                content={(section.content ?? {}) as Parameters<typeof ContactSection>[0]['content']}
-                socialContent={(socialSection?.content ?? {}) as { links?: { platform: string; url: string }[] }}
-                streamingContent={(streamingSection?.content ?? {}) as { links?: { platform: string; url: string }[] }}
+                content={contentResolved as Parameters<typeof ContactSection>[0]['content']}
+                socialContent={socialResolved}
+                streamingContent={streamingResolved}
                 visible={section.visible}
                 onMoveUp={moveUp}
                 onMoveDown={moveDown}
@@ -265,9 +291,15 @@ export default function HomePageClient() {
           return null;
         })}
 
-      {footerSection?.visible !== false && (
-        <Footer text={(footerSection?.content as { text?: string })?.text} />
-      )}
+      {footerSection?.visible !== false && (() => {
+        const footerResolved = getSectionContent(footerSection?.content as Record<string, unknown>, locale) as { text?: string; textFontSize?: number };
+        return (
+          <Footer
+            text={footerResolved?.text}
+            textFontSize={clampFontSize(footerResolved?.textFontSize)}
+          />
+        );
+      })()}
 
       {editingSection && (
         <EditSectionModal

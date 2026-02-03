@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { SectionWrapper } from '@/components/SectionWrapper';
 import { SocialIcons } from '@/components/SocialIcons';
 import { StreamingIcons } from '@/components/StreamingIcons';
+import { clampFontSize } from '@/lib/fontSize';
 
 type ContactContent = {
   title?: string;
@@ -12,6 +13,8 @@ type ContactContent = {
   imageUrl?: string;
   email?: string;
   phone?: string;
+  titleFontSize?: number;
+  textFontSize?: number;
 };
 
 export function ContactSection({
@@ -40,6 +43,8 @@ export function ContactSection({
   const email = content?.email ?? '';
   const phone = content?.phone ?? '';
   const imageUrl = content?.imageUrl ?? '';
+  const titlePx = clampFontSize(content?.titleFontSize);
+  const textPx = clampFontSize(content?.textFontSize);
 
   return (
     <SectionWrapper
@@ -54,7 +59,7 @@ export function ContactSection({
       visible={visible}
     >
       <div className="mx-auto max-w-5xl px-4 py-12 md:py-16">
-        <h2 className="font-title mb-8 text-center text-3xl font-bold tracking-wide md:text-4xl">
+        <h2 className="font-title mb-8 text-center text-3xl font-bold tracking-wide md:text-4xl" style={titlePx != null ? { fontSize: `${titlePx}px` } : undefined}>
           {content?.title ?? 'Contact'}
         </h2>
         <motion.div
@@ -65,7 +70,7 @@ export function ContactSection({
           data-block="contact"
         >
           <div>
-            {content?.body ? <p className="mb-6 font-body text-white/95 whitespace-pre-line">{content.body}</p> : null}
+            {content?.body ? <p className="mb-6 font-body text-white/95 whitespace-pre-line" style={textPx != null ? { fontSize: `${textPx}px` } : undefined}>{content.body}</p> : null}
             <div className="space-y-4">
               {email ? (
                 <p>

@@ -10,7 +10,8 @@ export async function SeoJsonLd({ path }: SeoJsonLdProps) {
   const jsonLd = seo?.json_ld?.trim();
   if (!jsonLd) return null;
   try {
-    JSON.parse(jsonLd);
+    const parsed = JSON.parse(jsonLd);
+    if (parsed === null || typeof parsed !== 'object') return null;
   } catch {
     return null;
   }

@@ -4,6 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { SectionWrapper } from '@/components/SectionWrapper';
+import { clampFontSize } from '@/lib/fontSize';
 
 type SceneContent = {
   title?: string;
@@ -12,6 +13,8 @@ type SceneContent = {
   imageUrl1?: string;
   imageUrl2?: string;
   ctaText?: string;
+  titleFontSize?: number;
+  textFontSize?: number;
 };
 
 export function SceneSection({
@@ -39,6 +42,8 @@ export function SceneSection({
   const imageUrl1 = content?.imageUrl1 ?? '';
   const imageUrl2 = content?.imageUrl2 ?? '';
   const ctaText = content?.ctaText ?? 'Réserver une prestation';
+  const titlePx = clampFontSize(content?.titleFontSize);
+  const textPx = clampFontSize(content?.textFontSize);
 
   return (
     <SectionWrapper
@@ -72,11 +77,11 @@ export function SceneSection({
             >
               Prestations scène
             </motion.span>
-            <h2 className="font-title mb-2 text-3xl font-bold tracking-tight md:text-4xl lg:text-5xl">
+            <h2 className="font-title mb-2 text-3xl font-bold tracking-tight md:text-4xl lg:text-5xl" style={titlePx != null ? { fontSize: `${titlePx}px` } : undefined}>
               {title}
             </h2>
-            <p className="font-title mb-4 text-lg text-white/90 whitespace-pre-line">{subtitle}</p>
-            <p className="font-body mb-8 max-w-lg text-white/95 leading-relaxed whitespace-pre-line">
+            <p className="font-title mb-4 text-lg text-white/90 whitespace-pre-line" style={textPx != null ? { fontSize: `${textPx}px` } : undefined}>{subtitle}</p>
+            <p className="font-body mb-8 max-w-lg text-white/95 leading-relaxed whitespace-pre-line" style={textPx != null ? { fontSize: `${textPx}px` } : undefined}>
               {body}
             </p>
             <motion.div

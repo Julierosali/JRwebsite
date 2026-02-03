@@ -3,11 +3,14 @@
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { SectionWrapper } from '@/components/SectionWrapper';
+import { clampFontSize } from '@/lib/fontSize';
 
 type PortraitContent = {
   title?: string;
   images?: { url: string; alt?: string }[];
   scrollSpeed?: number;
+  titleFontSize?: number;
+  textFontSize?: number;
 };
 
 export function PortraitSection({
@@ -31,6 +34,7 @@ export function PortraitSection({
 }) {
   const images = content?.images ?? [];
   const scrollSpeed = Math.max(10, Math.min(120, content?.scrollSpeed ?? 40)); // secondes pour un tour (10–120)
+  const titlePx = clampFontSize(content?.titleFontSize);
 
   return (
     <SectionWrapper
@@ -45,7 +49,7 @@ export function PortraitSection({
       visible={visible}
     >
       <div className="py-12 md:py-16">
-        <h2 className="font-title mb-8 text-center text-3xl font-bold tracking-wide md:text-4xl">
+        <h2 className="font-title mb-8 text-center text-3xl font-bold tracking-wide md:text-4xl" style={titlePx != null ? { fontSize: `${titlePx}px` } : undefined}>
           {content?.title ?? 'Portrait'}
         </h2>
         {images.length > 0 ? (

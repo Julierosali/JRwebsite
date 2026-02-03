@@ -9,6 +9,8 @@ import { Section } from '@/lib/supabase';
 import { getSpotifyEmbedUrl, getListenLinkType } from '@/lib/spotify';
 import { getYoutubeIdFromUrl } from '@/lib/youtube';
 import { useAdmin } from '@/context/AdminContext';
+import { useLocale } from '@/context/LocaleContext';
+import { getSectionContent } from '@/lib/locale';
 import { EditAlbumPageModal } from '@/components/EditAlbumPageModal';
 import { AnalyticsDashboard } from '@/components/AnalyticsDashboard';
 
@@ -37,6 +39,7 @@ export default function AlbumPageClient() {
   const router = useRouter();
   const slug = (params?.slug as string) ?? 'album';
   const { isAdmin } = useAdmin();
+  const { locale } = useLocale();
   const [section, setSection] = useState<Section | null>(null);
   const [loading, setLoading] = useState(true);
   const [showAlbumModal, setShowAlbumModal] = useState(false);
@@ -54,7 +57,7 @@ export default function AlbumPageClient() {
     })();
   }, []);
 
-  const content = (section?.content ?? {}) as AlbumContent;
+  const content = getSectionContent(section?.content as Record<string, unknown>, locale) as AlbumContent;
   const albumPage = content?.albumPage ?? {};
   const listenUrlsRaw = albumPage.listenUrls?.trim() ?? (albumPage.soundcloudEmbedUrl ? String(albumPage.soundcloudEmbedUrl) : '');
   const listenLinks = useMemo(

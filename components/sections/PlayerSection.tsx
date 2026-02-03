@@ -3,11 +3,14 @@
 import { motion } from 'framer-motion';
 import { getSpotifyEmbedUrl } from '@/lib/spotify';
 import { SectionWrapper } from '@/components/SectionWrapper';
+import { clampFontSize } from '@/lib/fontSize';
 
 type PlayerContent = {
   title?: string;
   spotifyEmbedUrl?: string;
   spotifyPlaylistId?: string;
+  titleFontSize?: number;
+  textFontSize?: number;
 };
 
 export function PlayerSection({
@@ -33,6 +36,8 @@ export function PlayerSection({
   const embedUrl = (c.spotifyEmbedUrl ?? (c as { spotify_embed_url?: string }).spotify_embed_url ?? '') as string;
   const playlistId = (c.spotifyPlaylistId ?? (c as { spotify_playlist_id?: string }).spotify_playlist_id ?? '') as string;
   const src = getSpotifyEmbedUrl(String(embedUrl || playlistId).trim());
+  const titlePx = clampFontSize(content?.titleFontSize);
+  const textPx = clampFontSize(content?.textFontSize);
 
   return (
     <SectionWrapper
@@ -47,7 +52,7 @@ export function PlayerSection({
       visible={visible}
     >
       <div className="mx-auto max-w-4xl px-4 pt-12 pb-4 md:pt-16 md:pb-6">
-        <h2 className="font-title mb-6 text-center text-3xl font-bold tracking-wide md:text-4xl">
+        <h2 className="font-title mb-6 text-center text-3xl font-bold tracking-wide md:text-4xl" style={titlePx != null ? { fontSize: `${titlePx}px` } : undefined}>
           {content?.title ?? 'Écouter'}
         </h2>
         {src ? (
@@ -69,8 +74,8 @@ export function PlayerSection({
           </motion.div>
         ) : (
           <div className="rounded-xl bg-black/40 p-8 text-center shadow-xl">
-            <p className="text-white/80 font-medium">Aucun lecteur configuré</p>
-            <p className="mt-2 text-sm text-white/60">
+            <p className="text-white/80 font-medium" style={textPx != null ? { fontSize: `${textPx}px` } : undefined}>Aucun lecteur configuré</p>
+            <p className="mt-2 text-sm text-white/60" style={textPx != null ? { fontSize: `${textPx}px` } : undefined}>
               Configurez un lien ou un ID de playlist Spotify dans l&apos;admin (bouton &laquo;&nbsp;Écouter&nbsp;&raquo; ou crayon sur cette section).
             </p>
           </div>

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { SectionWrapper } from '@/components/SectionWrapper';
+import { clampFontSize } from '@/lib/fontSize';
 
 type AlbumContent = {
   title?: string;
@@ -12,6 +13,8 @@ type AlbumContent = {
   coverUrl?: string;
   pageSlug?: string;
   description?: string;
+  titleFontSize?: number;
+  textFontSize?: number;
 };
 
 export function AlbumSection({
@@ -37,6 +40,8 @@ export function AlbumSection({
 }) {
   const slug = content?.pageSlug ?? 'album';
   const coverUrl = content?.coverUrl ?? '';
+  const titlePx = clampFontSize(content?.titleFontSize);
+  const textPx = clampFontSize(content?.textFontSize);
 
   return (
     <SectionWrapper
@@ -51,8 +56,8 @@ export function AlbumSection({
       visible={visible}
     >
       <div className="mx-auto max-w-5xl px-4 py-12 md:py-16">
-<h2 className="font-title mb-6 text-center text-3xl font-bold tracking-wide md:text-4xl">
-        {content?.title ?? 'Nouvel album'}
+        <h2 className="font-title mb-6 text-center text-3xl font-bold tracking-wide md:text-4xl" style={titlePx != null ? { fontSize: `${titlePx}px` } : undefined}>
+          {content?.title ?? 'Nouvel album'}
         </h2>
         <Link href={`/album/${slug}`} className="block" data-analytics-id={`Accueil|Album - ${content?.albumTitle ?? 'LIBRE'}`}>
           <motion.div
@@ -77,9 +82,9 @@ export function AlbumSection({
               )}
             </div>
             <div className="mt-6 md:mt-0">
-              <h3 className="font-title text-2xl font-bold md:text-3xl">{content?.albumTitle ?? 'LIBRE'}</h3>
-              <p className="font-title mt-2 text-white/90 whitespace-pre-line">{content?.subtitle ?? '11 titres, deux univers'}</p>
-              <p className="mt-4 text-sm text-white/80 line-clamp-3 whitespace-pre-line">{content?.description ?? ''}</p>
+              <h3 className="font-title text-2xl font-bold md:text-3xl" style={titlePx != null ? { fontSize: `${titlePx}px` } : undefined}>{content?.albumTitle ?? 'LIBRE'}</h3>
+              <p className="font-title mt-2 text-white/90 whitespace-pre-line" style={textPx != null ? { fontSize: `${textPx}px` } : undefined}>{content?.subtitle ?? '11 titres, deux univers'}</p>
+              <p className="mt-4 text-sm text-white/80 line-clamp-3 whitespace-pre-line" style={textPx != null ? { fontSize: `${textPx}px` } : undefined}>{content?.description ?? ''}</p>
               <span className="mt-4 inline-block rounded border border-white/60 px-4 py-2 text-sm font-medium transition hover:bg-white/20">
                 Découvrir l&apos;album →
               </span>

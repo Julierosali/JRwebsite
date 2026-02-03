@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { motion } from 'framer-motion';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 
 const DEFAULT_MENU_ITEMS = [
   { href: '#album', label: 'Nouvel album', key: 'album' },
@@ -15,9 +16,11 @@ const DEFAULT_MENU_ITEMS = [
 type NavProps = {
   /** Clés des sections visibles (masquées = absentes du menu). Si non fourni, tout le menu s'affiche. */
   visibleSectionKeys?: string[] | null;
+  /** Titres des sections par clé (locale courante). Si fourni, remplace les labels par défaut. */
+  sectionTitles?: Record<string, string> | null;
 };
 
-export function Nav({ visibleSectionKeys }: NavProps) {
+export function Nav({ visibleSectionKeys, sectionTitles }: NavProps) {
   const items =
     visibleSectionKeys && visibleSectionKeys.length > 0
       ? DEFAULT_MENU_ITEMS.filter((item) => visibleSectionKeys.includes(item.key))
@@ -30,19 +33,27 @@ export function Nav({ visibleSectionKeys }: NavProps) {
       transition={{ delay: 0.2, duration: 0.5 }}
       className="sticky top-0 z-50 border-b border-white/20 bg-black/30 backdrop-blur-md"
     >
-      <ul className="flex flex-wrap items-center justify-center gap-4 px-4 py-3 md:gap-6">
-        {items.map((item) => (
-          <li key={item.href}>
-            <Link
-              href={item.href}
-              data-analytics-id={`menu|${item.label}`}
-              className="font-title block rounded px-3 py-2 text-sm font-medium text-white transition hover:bg-violet/60 md:text-base"
-            >
-              {item.label}
-            </Link>
-          </li>
-        ))}
-      </ul>
+      <div className="flex items-center justify-between gap-4 px-4 py-3">
+        <ul className="flex flex-1 flex-wrap items-center justify-center gap-4 md:gap-6">
+          {items.map((item) => {
+            const label = sectionTitles?.[item.key]?.trim() || item.label;
+            return (
+              <li key={item.href}>
+                <Link
+                  href={item.href}
+                  data-analytics-id={`menu|${label}`}
+                  className="font-title block rounded px-3 py-2 text-sm font-medium text-white transition hover:bg-violet/60 md:text-base"
+                >
+                  {label}
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+        <div className="shrink-0">
+          <LanguageSwitcher />
+        </div>
+      </div>
     </motion.nav>
   );
 }

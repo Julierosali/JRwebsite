@@ -3,15 +3,18 @@
 import { motion } from 'framer-motion';
 import { SectionWrapper } from '@/components/SectionWrapper';
 import { parseVideoUrl } from '@/lib/video';
+import { clampFontSize } from '@/lib/fontSize';
 
 type VideoItem = { title?: string; youtubeId?: string };
 
 type ClipsContent = {
   title?: string;
   videos?: VideoItem[];
+  titleFontSize?: number;
+  textFontSize?: number;
 };
 
-function ClipCard({ video: v, index }: { video: VideoItem; index: number }) {
+function ClipCard({ video: v, index, textFontSize }: { video: VideoItem; index: number; textFontSize?: number }) {
   const raw = v.youtubeId ?? '';
   const parsed = parseVideoUrl(raw);
 
@@ -48,7 +51,7 @@ function ClipCard({ video: v, index }: { video: VideoItem; index: number }) {
           Vidéo à venir
         </div>
       )}
-      {v.title ? <p className="font-title p-3 text-center font-medium">{v.title}</p> : null}
+      {v.title ? <p className="font-title p-3 text-center font-medium" style={textFontSize != null ? { fontSize: `${textFontSize}px` } : undefined}>{v.title}</p> : null}
     </motion.div>
   );
 }
@@ -73,6 +76,8 @@ export function ClipsSection({
   canMoveDown: boolean;
 }) {
   const videos = content?.videos ?? [{ title: 'Clip 1', youtubeId: '' }, { title: 'Clip 2', youtubeId: '' }, { title: 'Clip 3', youtubeId: '' }];
+  const titlePx = clampFontSize(content?.titleFontSize);
+  const textPx = clampFontSize(content?.textFontSize);
 
   return (
     <SectionWrapper
@@ -87,9 +92,14 @@ export function ClipsSection({
       visible={visible}
     >
       <div className="mx-auto max-w-6xl px-4 pt-4 pb-12 md:pt-6 md:pb-16">
+        {content?.title ? (
+          <h2 className="font-title mb-6 text-center text-3xl font-bold tracking-wide md:text-4xl" style={titlePx != null ? { fontSize: `${titlePx}px` } : undefined}>
+            {content.title}
+          </h2>
+        ) : null}
         <div className="grid gap-6 md:grid-cols-3">
           {videos.map((v, i) => (
-            <ClipCard key={i} video={v} index={i} />
+            <ClipCard key={i} video={v} index={i} textFontSize={textPx ?? undefined} />
           ))}
         </div>
       </div>

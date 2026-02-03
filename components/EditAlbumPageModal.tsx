@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Section } from '@/lib/supabase';
 import { getYoutubeIdFromUrl, youtubeIdToUrl } from '@/lib/youtube';
+import { isBilingualContent, type Locale } from '@/lib/locale';
 
 type EditAlbumPageModalProps = {
   section: Section | null;
@@ -10,12 +11,19 @@ type EditAlbumPageModalProps = {
   onSave: (id: string, content: Record<string, unknown>) => Promise<void>;
 };
 
+function normalizeBilingual(content: Record<string, unknown>): Record<string, unknown> {
+  if (isBilingualContent(content)) return content;
+  const flat = { ...content };
+  return { fr: { ...flat }, es: { ...flat } };
+}
+
 export function EditAlbumPageModal({ section, onClose, onSave }: EditAlbumPageModalProps) {
   const [content, setContent] = useState<Record<string, unknown>>({});
+  const [editLocale, setEditLocale] = useState<Locale>('fr');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (section) setContent(section.content as Record<string, unknown>);
+    if (section) setContent(normalizeBilingual(section.content as Record<string, unknown>));
   }, [section]);
 
   if (!section) return null;
@@ -29,7 +37,7 @@ export function EditAlbumPageModal({ section, onClose, onSave }: EditAlbumPageMo
 
   const update = (path: string, value: unknown) => {
     setContent((prev) => {
-      const next = { ...prev };
+      const next = JSON.parse(JSON.stringify(prev));
       const keys = path.split('.');
       let cur: Record<string, unknown> = next;
       for (let i = 0; i < keys.length - 1; i++) {
@@ -42,8 +50,9 @@ export function EditAlbumPageModal({ section, onClose, onSave }: EditAlbumPageMo
     });
   };
 
-  const c = content as Record<string, unknown>;
-  const ap = (c.albumPage as Record<string, unknown>) ?? {};
+  const u = (path: string, value: unknown) => update(`${editLocale}.${path}`, value);
+  const block = (content[editLocale] ?? content) as Record<string, unknown>;
+  const ap = (block.albumPage as Record<string, unknown>) ?? {};
   const buttons = (ap.buttons as { label: string; url: string }[]) ?? [];
   const videoGallery = (ap.videoGallery as string[]) ?? [];
   const videoGalleryColumns = Math.min(4, Math.max(1, (ap.videoGalleryColumns as number) ?? 2));
@@ -55,7 +64,23 @@ export function EditAlbumPageModal({ section, onClose, onSave }: EditAlbumPageMo
         onClick={(e) => e.stopPropagation()}
       >
         <h3 className="text-xl font-bold">Page album</h3>
-        <p className="mt-1 text-sm text-white/70">
+        <div className="mt-4 flex gap-2 border-b border-white/20 pb-3">
+          <button
+            type="button"
+            onClick={() => setEditLocale('fr')}
+            className={`rounded px-3 py-1.5 text-sm font-medium transition ${editLocale === 'fr' ? 'bg-violet text-white' : 'bg-white/10 text-white/80 hover:bg-white/20'}`}
+          >
+            🇫🇷 Fr
+          </button>
+          <button
+            type="button"
+            onClick={() => setEditLocale('es')}
+            className={`rounded px-3 py-1.5 text-sm font-medium transition ${editLocale === 'es' ? 'bg-violet text-white' : 'bg-white/10 text-white/80 hover:bg-white/20'}`}
+          >
+            🇪🇸 Es
+          </button>
+        </div>
+        <p className="mt-3 text-sm text-white/70">
           Date de sortie, artiste, lecteurs, vidéo, boutons sous la pochette.
         </p>
 
@@ -65,7 +90,7 @@ export function EditAlbumPageModal({ section, onClose, onSave }: EditAlbumPageMo
             <input
               type="text"
               value={String(ap.releaseDate ?? '')}
-              onChange={(e) => update('albumPage', { ...ap, releaseDate: e.target.value })}
+              onChange={(e) => u('albumPage', { ...ap, releaseDate: e.target.value })}
               className="mt-1 w-full rounded border border-white/30 bg-black/30 px-3 py-2 text-white"
               placeholder="16 septembre 2024"
             />
@@ -75,7 +100,7 @@ export function EditAlbumPageModal({ section, onClose, onSave }: EditAlbumPageMo
             <input
               type="text"
               value={String(ap.artist ?? '')}
-              onChange={(e) => update('albumPage', { ...ap, artist: e.target.value })}
+              onChange={(e) => u('albumPage', { ...ap, artist: e.target.value })}
               className="mt-1 w-full rounded border border-white/30 bg-black/30 px-3 py-2 text-white"
             />
           </div>
@@ -84,7 +109,7 @@ export function EditAlbumPageModal({ section, onClose, onSave }: EditAlbumPageMo
             <input
               type="text"
               value={String(ap.label ?? '')}
-              onChange={(e) => update('albumPage', { ...ap, label: e.target.value })}
+              onChange={(e) => u('albumPage', { ...ap, label: e.target.value })}
               className="mt-1 w-full rounded border border-white/30 bg-black/30 px-3 py-2 text-white"
             />
           </div>
@@ -93,7 +118,7 @@ export function EditAlbumPageModal({ section, onClose, onSave }: EditAlbumPageMo
             <input
               type="url"
               value={youtubeIdToUrl(String(ap.youtubeEmbedId ?? ''))}
-              onChange={(e) => update('albumPage', { ...ap, youtubeEmbedId: getYoutubeIdFromUrl(e.target.value) })}
+              onChange={(e) => u('albumPage', { ...ap, youtubeEmbedId: getYoutubeIdFromUrl(e.target.value) })}
               className="mt-1 w-full rounded border border-white/30 bg-black/30 px-3 py-2 text-white"
               placeholder="https://www.youtube.com/watch?v=..."
             />
@@ -103,7 +128,7 @@ export function EditAlbumPageModal({ section, onClose, onSave }: EditAlbumPageMo
             <p className="mt-1 text-xs text-white/70">Un lien par ligne. Le lecteur affiché s&apos;adapte au type de lien.</p>
             <textarea
               value={(ap.listenUrls as string) ?? (ap.soundcloudEmbedUrl as string) ?? ''}
-              onChange={(e) => update('albumPage', { ...ap, listenUrls: e.target.value })}
+              onChange={(e) => u('albumPage', { ...ap, listenUrls: e.target.value })}
               rows={3}
               className="mt-1 w-full rounded border border-white/30 bg-black/30 px-3 py-2 text-white"
               placeholder={"https://open.spotify.com/track/...\nhttps://soundcloud.com/..."}
@@ -119,7 +144,7 @@ export function EditAlbumPageModal({ section, onClose, onSave }: EditAlbumPageMo
                   onChange={(e) => {
                     const next = [...buttons];
                     next[i] = { ...next[i], label: e.target.value };
-                    update('albumPage', { ...ap, buttons: next });
+                    u('albumPage', { ...ap, buttons: next });
                   }}
                   placeholder="Libellé"
                   className="flex-1 min-w-[120px] rounded border border-white/30 bg-black/30 px-2 py-1.5 text-sm text-white"
@@ -130,7 +155,7 @@ export function EditAlbumPageModal({ section, onClose, onSave }: EditAlbumPageMo
                   onChange={(e) => {
                     const next = [...buttons];
                     next[i] = { ...next[i], url: e.target.value };
-                    update('albumPage', { ...ap, buttons: next });
+                    u('albumPage', { ...ap, buttons: next });
                   }}
                   placeholder="https://..."
                   className="flex-1 min-w-[160px] rounded border border-white/30 bg-black/30 px-2 py-1.5 text-sm text-white"
@@ -139,7 +164,7 @@ export function EditAlbumPageModal({ section, onClose, onSave }: EditAlbumPageMo
                   type="button"
                   onClick={() => {
                     const next = buttons.filter((_, j) => j !== i);
-                    update('albumPage', { ...ap, buttons: next });
+                    u('albumPage', { ...ap, buttons: next });
                   }}
                   className="rounded border border-red-400/50 bg-red-900/20 px-2 py-1 text-xs text-red-200 hover:bg-red-900/40"
                 >
@@ -149,7 +174,7 @@ export function EditAlbumPageModal({ section, onClose, onSave }: EditAlbumPageMo
             ))}
             <button
               type="button"
-              onClick={() => update('albumPage', { ...ap, buttons: [...buttons, { label: '', url: '' }] })}
+              onClick={() => u('albumPage', { ...ap, buttons: [...buttons, { label: '', url: '' }] })}
               className="mt-2 rounded border border-white/40 bg-white/10 px-3 py-2 text-sm font-medium transition hover:bg-white/20"
             >
               + Ajouter un bouton
@@ -162,7 +187,7 @@ export function EditAlbumPageModal({ section, onClose, onSave }: EditAlbumPageMo
               <label className="block text-xs text-white/70">Nombre de colonnes</label>
               <select
                 value={videoGalleryColumns}
-                onChange={(e) => update('albumPage', { ...ap, videoGalleryColumns: Number(e.target.value) || 2 })}
+                onChange={(e) => u('albumPage', { ...ap, videoGalleryColumns: Number(e.target.value) || 2 })}
                 className="mt-1 rounded border border-white/30 bg-black/30 px-3 py-2 text-white"
               >
                 {[1, 2, 3, 4].map((n) => (
@@ -181,7 +206,7 @@ export function EditAlbumPageModal({ section, onClose, onSave }: EditAlbumPageMo
                     onChange={(e) => {
                       const next = [...videoGallery];
                       next[i] = e.target.value;
-                      update('albumPage', { ...ap, videoGallery: next });
+                      u('albumPage', { ...ap, videoGallery: next });
                     }}
                     placeholder="https://www.youtube.com/watch?v=..."
                     className="min-w-[180px] flex-1 rounded border border-white/30 bg-black/30 px-2 py-1.5 text-sm text-white"
@@ -194,7 +219,7 @@ export function EditAlbumPageModal({ section, onClose, onSave }: EditAlbumPageMo
                         if (i === 0) return;
                         const next = [...videoGallery];
                         [next[i - 1], next[i]] = [next[i], next[i - 1]];
-                        update('albumPage', { ...ap, videoGallery: next });
+                        u('albumPage', { ...ap, videoGallery: next });
                       }}
                       className="rounded border border-white/30 bg-white/10 px-2 py-1 text-xs disabled:opacity-40"
                       title="Monter"
@@ -208,7 +233,7 @@ export function EditAlbumPageModal({ section, onClose, onSave }: EditAlbumPageMo
                         if (i === videoGallery.length - 1) return;
                         const next = [...videoGallery];
                         [next[i], next[i + 1]] = [next[i + 1], next[i]];
-                        update('albumPage', { ...ap, videoGallery: next });
+                        u('albumPage', { ...ap, videoGallery: next });
                       }}
                       className="rounded border border-white/30 bg-white/10 px-2 py-1 text-xs disabled:opacity-40"
                       title="Descendre"
@@ -219,7 +244,7 @@ export function EditAlbumPageModal({ section, onClose, onSave }: EditAlbumPageMo
                       type="button"
                       onClick={() => {
                         const next = videoGallery.filter((_, j) => j !== i);
-                        update('albumPage', { ...ap, videoGallery: next });
+                        u('albumPage', { ...ap, videoGallery: next });
                       }}
                       className="rounded border border-red-400/50 bg-red-900/20 px-2 py-1 text-xs text-red-200 hover:bg-red-900/40"
                     >
@@ -230,7 +255,7 @@ export function EditAlbumPageModal({ section, onClose, onSave }: EditAlbumPageMo
               ))}
               <button
                 type="button"
-                onClick={() => update('albumPage', { ...ap, videoGallery: [...videoGallery, ''] })}
+                onClick={() => u('albumPage', { ...ap, videoGallery: [...videoGallery, ''] })}
                 className="rounded border border-white/40 bg-white/10 px-3 py-2 text-sm font-medium transition hover:bg-white/20"
               >
                 + Ajouter une vidéo

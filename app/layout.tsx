@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Anton, Source_Sans_3, Playfair_Display, Lora } from 'next/font/google';
 import { AdminProvider } from '@/context/AdminContext';
+import { LocaleProvider } from '@/context/LocaleContext';
 import { AnalyticsCollector } from '@/components/AnalyticsCollector';
 import { getSeoSettings } from '@/lib/seo';
 import './globals.css';
@@ -48,8 +49,10 @@ export default function RootLayout({
     <html lang="fr" className={`${anton.variable} ${sourceSans.variable} ${playfairDisplay.variable} ${lora.variable}`}>
       <body className="font-body antialiased bg-gradient min-h-screen text-white">
         <AdminProvider>
-          <AnalyticsCollector />
-          {children}
+          <LocaleProvider>
+            <AnalyticsCollector />
+            {children}
+          </LocaleProvider>
         </AdminProvider>
       </body>
     </html>
