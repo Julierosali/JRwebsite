@@ -112,7 +112,7 @@ export async function GET(req: NextRequest) {
       ? Math.round(withDuration.reduce((a, p) => a + (p.duration || 0), 0) / withDuration.length)
       : 0;
   const singlePageVisits = sessionIds.size > 0
-    ? [...sessionIds].filter((sid) => {
+    ? Array.from(sessionIds).filter((sid) => {
         const count = pageviews.filter((e) => e.session_id === sid).length;
         return count <= 1;
       }).length
