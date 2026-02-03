@@ -44,7 +44,7 @@ function fetchWithAuth(url: string, options?: RequestInit) {
     if (session?.access_token) {
       (headers as Record<string, string>)['Authorization'] = `Bearer ${session.access_token}`;
     }
-    return fetch(url, { ...options, headers });
+    return fetch(url, { ...options, headers, credentials: 'same-origin' });
   });
 }
 
@@ -89,7 +89,12 @@ export function AnalyticsDashboard({ onClose }: { onClose: () => void }) {
     params.set('page', String(page));
     const res = await fetchWithAuth(`/api/admin/analytics?${params}`);
     if (!res.ok) {
-      setError(res.status === 401 ? 'Non autorisé' : await res.text());
+      const text = await res.text();
+      const errMsg =
+        res.status === 401
+          ? 'Non autorisé. Connectez-vous en admin sur ce site (prod), puis rouvrez Statistiques. En prod, vérifiez aussi que SUPABASE_SERVICE_ROLE_KEY est défini dans Vercel (Settings → Environment Variables).'
+          : text || res.statusText;
+      setError(errMsg);
       setLoading(false);
       return;
     }
