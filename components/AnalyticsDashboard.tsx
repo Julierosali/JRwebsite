@@ -94,7 +94,7 @@ export function AnalyticsDashboard({ onClose }: { onClose: () => void }) {
     setLoading(false);
   }, [user, period, days, page]);
 
-  useEffect(() => => {
+  useEffect(() => {
     load();
   }, [load]);
 
