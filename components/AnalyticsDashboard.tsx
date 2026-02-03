@@ -194,8 +194,23 @@ export function AnalyticsDashboard({ onClose }: { onClose: () => void }) {
         className="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-xl bg-blue/95 p-6 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="text-xl font-bold">Statistiques</h3>
-        <p className="mt-1 text-sm text-white/70">Analytics sans cookies, respectueux de la vie privée.</p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h3 className="text-xl font-bold">Statistiques</h3>
+            <p className="mt-1 text-sm text-white/70">Analytics sans cookies, respectueux de la vie privée.</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => { setTab('maintenance'); setPage(1); }}
+            className={`shrink-0 rounded px-3 py-1.5 text-sm ${
+              tab === 'maintenance'
+                ? 'bg-red-600 text-white'
+                : 'bg-red-900/50 text-red-200 hover:bg-red-900/70'
+            }`}
+          >
+            Maintenance
+          </button>
+        </div>
 
         <div className="mt-4 flex flex-wrap gap-2">
           <label className="flex items-center gap-2 text-sm text-white/90">
@@ -220,19 +235,13 @@ export function AnalyticsDashboard({ onClose }: { onClose: () => void }) {
         {purgeFeedback && <p className="mt-2 text-sm text-green-300">{purgeFeedback}</p>}
 
         <div className="mt-4 flex flex-wrap gap-1 border-b border-white/20 pb-2">
-          {TABS.map((t) => (
+          {TABS.filter((t) => t.id !== 'maintenance').map((t) => (
             <button
               key={t.id}
               type="button"
               onClick={() => { setTab(t.id); setPage(1); }}
               className={`rounded px-3 py-1.5 text-sm ${
-                t.id === 'maintenance'
-                  ? tab === t.id
-                    ? 'bg-red-600 text-white'
-                    : 'bg-red-900/50 text-red-200 hover:bg-red-900/70'
-                  : tab === t.id
-                    ? 'bg-violet text-white'
-                    : 'bg-white/10 text-white/80 hover:bg-white/20'
+                tab === t.id ? 'bg-violet text-white' : 'bg-white/10 text-white/80 hover:bg-white/20'
               }`}
             >
               {t.label}
