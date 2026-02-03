@@ -17,6 +17,7 @@ import { ContactSection } from '@/components/sections/ContactSection';
 import { EditSectionModal } from '@/components/EditSectionModal';
 import { EditStyleModal } from '@/components/EditStyleModal';
 import { EditSeoModal } from '@/components/EditSeoModal';
+import { AnalyticsDashboard } from '@/components/AnalyticsDashboard';
 import { StyleInjector } from '@/components/StyleInjector';
 import { Section } from '@/lib/supabase';
 
@@ -28,6 +29,7 @@ export default function HomePageClient() {
   const [editingSection, setEditingSection] = useState<Section | null>(null);
   const [editingStyleSection, setEditingStyleSection] = useState<Section | null>(null);
   const [showSeoModal, setShowSeoModal] = useState(false);
+  const [showStatsModal, setShowStatsModal] = useState(false);
 
   const sectionsByKey = useMemo(() => {
     const map: Record<string, Section> = {};
@@ -130,8 +132,17 @@ export default function HomePageClient() {
           >
             SEO
           </button>
+          <button
+            type="button"
+            onClick={() => setShowStatsModal(true)}
+            className="rounded bg-white/20 px-3 py-2 text-sm hover:bg-white/30"
+          >
+            Statistiques
+          </button>
         </div>
       )}
+
+      {showStatsModal && <AnalyticsDashboard onClose={() => setShowStatsModal(false)} />}
 
       {sections
         .filter((s) => !['header', 'footer', 'social', 'streaming', 'style'].includes(s.key))

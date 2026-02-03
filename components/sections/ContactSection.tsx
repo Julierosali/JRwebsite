@@ -70,7 +70,7 @@ export function ContactSection({
               {email ? (
                 <p>
                   <span className="mr-2">@</span>
-                  <a href={`mailto:${email}`} className="underline hover:no-underline">
+                  <a href={`mailto:${email}`} className="underline hover:no-underline" data-analytics-id="Contact|Email">
                     {email}
                   </a>
                 </p>

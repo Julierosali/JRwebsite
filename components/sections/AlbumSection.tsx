@@ -54,7 +54,7 @@ export function AlbumSection({
 <h2 className="font-title mb-6 text-center text-3xl font-bold tracking-wide md:text-4xl">
         {content?.title ?? 'Nouvel album'}
         </h2>
-        <Link href={`/album/${slug}`} className="block">
+        <Link href={`/album/${slug}`} className="block" data-analytics-id={`Accueil|Album - ${content?.albumTitle ?? 'LIBRE'}`}>
           <motion.div
             whileHover={{ scale: 1.02 }}
             transition={{ type: 'spring', stiffness: 300 }}

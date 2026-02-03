@@ -51,7 +51,7 @@ export function Header({ content }: { content: HeaderContent }) {
         aria-hidden
       />
       <div className="relative z-10 flex w-full flex-1 flex-col items-center justify-center px-4 py-8 md:py-12">
-        <h1 className="font-title text-4xl font-bold tracking-wide md:text-5xl lg:text-6xl">{title}</h1>
+        <h1 className="font-title text-4xl font-bold tracking-wide md:text-5xl lg:text-6xl" data-analytics-id="Header|Logo">{title}</h1>
         {subtitle ? (
           <p className="font-title mt-2 text-lg text-white/90 md:text-xl whitespace-pre-line">{subtitle}</p>
         ) : null}

@@ -57,6 +57,7 @@ export function PortraitSection({
           >
             <div
               className="flex h-full gap-2 md:gap-3"
+              data-gallery="photo"
               style={{
                 width: 'max-content',
                 animation: `portrait-scroll ${scrollSpeed}s linear infinite`,

@@ -10,6 +10,7 @@ import { getSpotifyEmbedUrl, getListenLinkType } from '@/lib/spotify';
 import { getYoutubeIdFromUrl } from '@/lib/youtube';
 import { useAdmin } from '@/context/AdminContext';
 import { EditAlbumPageModal } from '@/components/EditAlbumPageModal';
+import { AnalyticsDashboard } from '@/components/AnalyticsDashboard';
 
 type AlbumContent = {
   title?: string;
@@ -39,6 +40,7 @@ export default function AlbumPageClient() {
   const [section, setSection] = useState<Section | null>(null);
   const [loading, setLoading] = useState(true);
   const [showAlbumModal, setShowAlbumModal] = useState(false);
+  const [showStatsModal, setShowStatsModal] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -106,6 +108,7 @@ export default function AlbumPageClient() {
             <Link
               href="/"
               className="rounded border border-white/40 px-4 py-2 text-sm font-medium transition hover:bg-white/20"
+              data-analytics-id="menu|Accueil"
             >
               Accueil
             </Link>
@@ -120,8 +123,16 @@ export default function AlbumPageClient() {
           >
             Admin
           </Link>
+          <button
+            type="button"
+            onClick={() => setShowStatsModal(true)}
+            className="rounded bg-white/20 px-3 py-2 text-sm font-medium transition hover:bg-white/30"
+          >
+            Statistiques
+          </button>
         </div>
       )}
+      {showStatsModal && <AnalyticsDashboard onClose={() => setShowStatsModal(false)} />}
       {showAlbumModal && section && (
         <EditAlbumPageModal
           section={section}
@@ -253,6 +264,7 @@ export default function AlbumPageClient() {
             <h2 className="text-lg font-bold">Galerie vidéo</h2>
             <div
               className="grid gap-4"
+              data-gallery="video"
               style={{ gridTemplateColumns: `repeat(${videoGalleryColumns}, minmax(0, 1fr))` }}
             >
               {videoGallery
