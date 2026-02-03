@@ -44,10 +44,21 @@ export function isBilingualContent(
   return 'fr' in content || 'es' in content;
 }
 
+/** Champs communs à toutes les langues (visuels, réglages) : lus à la racine ou dans fr. */
+const SHARED_KEYS = [
+  'titleFontSize',
+  'textFontSize',
+  'logoUrl',
+  'focusX',
+  'focusY',
+  'overlayColor',
+  'overlayOpacity',
+];
+
 /**
  * Extrait le contenu d'une section pour une locale donnée.
- * Les tailles titre/texte (titleFontSize, textFontSize) sont communes à toutes les langues :
- * elles sont lues au niveau racine du content et fusionnées avec le bloc de la locale.
+ * Les champs partagés (tailles, image header, overlay, etc.) sont lus à la racine ou dans fr
+ * et fusionnés avec le bloc de la locale, pour que l’image du header et les réglages restent en ES.
  */
 export function getSectionContent<T extends Record<string, unknown>>(
   content: Record<string, unknown> | null | undefined,
@@ -61,7 +72,12 @@ export function getSectionContent<T extends Record<string, unknown>>(
   const byLocale = content[locale] as Record<string, unknown> | undefined;
   const fr = content.fr as Record<string, unknown> | undefined;
   const fallback = { ...(byLocale ?? fr ?? {}) } as Record<string, unknown>;
-  if (typeof content.titleFontSize === 'number') fallback.titleFontSize = content.titleFontSize;
-  if (typeof content.textFontSize === 'number') fallback.textFontSize = content.textFontSize;
+  for (const key of SHARED_KEYS) {
+    if (content[key] !== undefined) {
+      fallback[key] = content[key];
+    } else if (fr?.[key] !== undefined) {
+      fallback[key] = fr[key];
+    }
+  }
   return fallback as T;
 }
