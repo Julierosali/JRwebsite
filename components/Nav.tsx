@@ -42,7 +42,7 @@ export function Nav({ visibleSectionKeys, sectionTitles }: NavProps) {
                 <Link
                   href={item.href}
                   data-analytics-id={`menu|${label}`}
-                  className="font-title block rounded px-3 py-2 text-sm font-medium text-white transition hover:bg-violet/60 md:text-base"
+                  className="font-title block rounded px-3 py-2 text-lg font-medium text-white transition hover:bg-violet/60 md:text-xl"
                 >
                   {label}
                 </Link>
