@@ -167,6 +167,7 @@ export function AnalyticsDashboard({ onClose }: { onClose: () => void }) {
 
   const runPurge = async (mode: '3months' | '1month' | 'all' | 'ips', ips?: string[]) => {
     if (!user) return;
+    setPurgeFeedback(null);
     let url = '/api/admin/analytics/purge';
     let body: string | undefined;
     if (mode === 'all') url += '?all=1';
@@ -174,19 +175,32 @@ export function AnalyticsDashboard({ onClose }: { onClose: () => void }) {
     else if (mode === 'ips' && ips && ips.length > 0) {
       body = JSON.stringify({ ips });
     }
-    const res = await fetchWithAuth(url, {
-      method: 'POST',
-      headers: body ? { 'Content-Type': 'application/json' } : undefined,
-      body,
-    });
-    if (!res.ok) return;
-    const json = await res.json();
-    setPurgeFeedback(json.purged ? `${json.purged} (${json.count ?? 0} session(s))` : 'Purge effectuée');
-    setTimeout(() => setPurgeFeedback(null), 4000);
-    load();
+    try {
+      const res = await fetchWithAuth(url, {
+        method: 'POST',
+        headers: body ? { 'Content-Type': 'application/json' } : undefined,
+        body,
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setPurgeFeedback(`Erreur : ${json.error || res.statusText || res.status}`);
+        setTimeout(() => setPurgeFeedback(null), 6000);
+        return;
+      }
+      const msg = json.purged
+        ? (json.purged === 'all' ? 'Toutes les stats ont été purgées.' : `${json.purged} — ${json.count ?? 0} session(s) supprimée(s).`)
+        : 'Purge effectuée.';
+      setPurgeFeedback(msg);
+      setTimeout(() => setPurgeFeedback(null), 5000);
+      load();
+    } catch (e) {
+      setPurgeFeedback(`Erreur : ${e instanceof Error ? e.message : 'Purge impossible'}`);
+      setTimeout(() => setPurgeFeedback(null), 6000);
+    }
   };
 
   const perPage = 20;
+  const pathLabel = (p: string) => (p === '/' || p === '') ? 'home' : (p || 'home');
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
@@ -232,7 +246,7 @@ export function AnalyticsDashboard({ onClose }: { onClose: () => void }) {
         {error && <p className="mt-2 text-sm text-red-300">{error}</p>}
         {visitorFeedback && <p className="mt-2 text-sm text-green-300">{visitorFeedback}</p>}
         {excludeHashFeedback && <p className="mt-2 text-sm text-green-300">{excludeHashFeedback}</p>}
-        {purgeFeedback && <p className="mt-2 text-sm text-green-300">{purgeFeedback}</p>}
+        {purgeFeedback && tab !== 'maintenance' && <p className="mt-2 text-sm text-green-300">{purgeFeedback}</p>}
 
         <div className="mt-4 flex flex-wrap gap-1 border-b border-white/20 pb-2">
           {TABS.filter((t) => t.id !== 'maintenance').map((t) => (
@@ -299,7 +313,7 @@ export function AnalyticsDashboard({ onClose }: { onClose: () => void }) {
                 <tbody>
                   {data.topContents.map((r) => (
                     <tr key={r.path} className="border-b border-white/10">
-                      <td className="py-1.5">{r.path || '/'}</td>
+                      <td className="py-1.5">{pathLabel(r.path)}</td>
                       <td className="py-1.5">{r.count}</td>
                     </tr>
                   ))}
@@ -391,7 +405,7 @@ export function AnalyticsDashboard({ onClose }: { onClose: () => void }) {
                 <tbody>
                   {data.visitsByPage.map((r) => (
                     <tr key={r.path} className="border-b border-white/10">
-                      <td className="py-1.5">{r.path || '/'}</td>
+                      <td className="py-1.5">{pathLabel(r.path)}</td>
                       <td className="py-1.5">{r.count}</td>
                     </tr>
                   ))}
@@ -521,6 +535,11 @@ export function AnalyticsDashboard({ onClose }: { onClose: () => void }) {
 
         {tab === 'maintenance' && (
           <div className="mt-4 space-y-4">
+            {purgeFeedback && (
+              <p className={`rounded border px-3 py-2 text-sm ${purgeFeedback.startsWith('Erreur') ? 'border-red-400/50 bg-red-900/20 text-red-200' : 'border-green-400/50 bg-green-900/20 text-green-200'}`}>
+                {purgeFeedback}
+              </p>
+            )}
             <div className="rounded border border-white/20 p-4">
               <p className="text-sm font-medium text-white/90">Purger les données</p>
               <div className="mt-2 flex flex-wrap gap-2">
