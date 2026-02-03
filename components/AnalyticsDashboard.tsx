@@ -216,7 +216,15 @@ export function AnalyticsDashboard({ onClose }: { onClose: () => void }) {
               key={t.id}
               type="button"
               onClick={() => { setTab(t.id); setPage(1); }}
-              className={`rounded px-3 py-1.5 text-sm ${tab === t.id ? 'bg-violet text-white' : 'bg-white/10 text-white/80 hover:bg-white/20'}`}
+              className={`rounded px-3 py-1.5 text-sm ${
+                t.id === 'maintenance'
+                  ? tab === t.id
+                    ? 'bg-red-600 text-white'
+                    : 'bg-red-900/50 text-red-200 hover:bg-red-900/70'
+                  : tab === t.id
+                    ? 'bg-violet text-white'
+                    : 'bg-white/10 text-white/80 hover:bg-white/20'
+              }`}
             >
               {t.label}
             </button>
@@ -621,7 +629,6 @@ export function AnalyticsDashboard({ onClose }: { onClose: () => void }) {
               </div>
             </div>
           </div>
-        )}
 
         <div className="mt-6 flex justify-end">
           <button
