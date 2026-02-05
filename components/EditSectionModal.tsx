@@ -17,29 +17,34 @@ type EditSectionModalProps = {
 };
 
 const SIZE_KEYS = ['titleFontSize', 'textFontSize'];
+const PORTRAIT_SHARED_KEYS = ['images', 'scrollSpeed'];
 
 function normalizeBilingual(content: Record<string, unknown>): Record<string, unknown> {
   if (isBilingualContent(content)) {
     const next = { ...content } as Record<string, unknown>;
     const fr = next.fr as Record<string, unknown> | undefined;
     const es = next.es as Record<string, unknown> | undefined;
-    if (next.titleFontSize === undefined && fr?.titleFontSize !== undefined) next.titleFontSize = fr.titleFontSize;
-    if (next.textFontSize === undefined && fr?.textFontSize !== undefined) next.textFontSize = fr.textFontSize;
+    SIZE_KEYS.forEach((k) => {
+      if (next[k] === undefined && fr?.[k] !== undefined) next[k] = fr[k];
+    });
+    PORTRAIT_SHARED_KEYS.forEach((k) => {
+      if (next[k] === undefined && fr?.[k] !== undefined) next[k] = fr[k];
+    });
     if (fr) {
       const frCopy = { ...fr };
-      SIZE_KEYS.forEach((k) => delete frCopy[k]);
+      [...SIZE_KEYS, ...PORTRAIT_SHARED_KEYS].forEach((k) => delete frCopy[k]);
       next.fr = frCopy;
     }
     if (es) {
       const esCopy = { ...es };
-      SIZE_KEYS.forEach((k) => delete esCopy[k]);
+      [...SIZE_KEYS, ...PORTRAIT_SHARED_KEYS].forEach((k) => delete esCopy[k]);
       next.es = esCopy;
     }
     return next;
   }
   const flat = { ...content };
   const rootSizes: Record<string, unknown> = {};
-  SIZE_KEYS.forEach((k) => {
+  [...SIZE_KEYS, ...PORTRAIT_SHARED_KEYS].forEach((k) => {
     if (flat[k] !== undefined) rootSizes[k] = flat[k];
     delete flat[k];
   });
@@ -451,8 +456,15 @@ export function EditSectionModal({ section, onClose, onSave, title: titleOverrid
     }
 
     if (key === 'portrait') {
-      const images = (c.images as { url: string; alt?: string }[]) ?? [];
-      const scrollSpeed = typeof c.scrollSpeed === 'number' ? c.scrollSpeed : 40;
+      const blockFr = content.fr as Record<string, unknown> | undefined;
+      const images = ((content as Record<string, unknown>).images ?? blockFr?.images ?? c.images ?? []) as { url: string; alt?: string }[];
+      const scrollSpeed = typeof (content as Record<string, unknown>).scrollSpeed === 'number'
+        ? (content as Record<string, unknown>).scrollSpeed as number
+        : typeof blockFr?.scrollSpeed === 'number'
+          ? blockFr.scrollSpeed as number
+          : typeof c.scrollSpeed === 'number'
+            ? c.scrollSpeed
+            : 40;
       return (
         <>
           {renderSizeRow(true, true)}
@@ -469,13 +481,13 @@ export function EditSectionModal({ section, onClose, onSave, title: titleOverrid
             min={10}
             max={120}
             value={scrollSpeed}
-            onChange={(e) => u('scrollSpeed', Number(e.target.value) || 40)}
+            onChange={(e) => update('scrollSpeed', Number(e.target.value) || 40)}
             className="mt-1 w-full rounded border border-white/30 bg-black/30 px-3 py-2 text-white"
           />
           <p className="mt-1 text-xs text-white/60">Entre 10 et 120 secondes. Plus le nombre est bas, plus le défilement est rapide.</p>
           <ImageGalleryEdit
             images={images}
-            onChange={(imgs) => u('images', imgs)}
+            onChange={(imgs) => update('images', imgs)}
             pathPrefix="portrait"
           />
         </>

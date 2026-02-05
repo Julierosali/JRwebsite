@@ -16,8 +16,7 @@ type AnalyticsData = {
   filter?: { include: string[]; exclude: string[]; excludeHashes: string[] };
   kpis: KPIs;
   topContents: { path: string; count: number }[];
-  byCountry: { country: string; count: number }[];
-  byCity: { city: string; count: number }[];
+  byCountryCity: { country: string; city: string; count: number }[];
   topClicks: { element_id: string; count: number }[];
   bySource: { referrer: string; browser: string; count: number }[];
   visitsByPage: { path: string; count: number }[];
@@ -29,8 +28,7 @@ type AnalyticsData = {
 
 const TABS = [
   { id: 'top', label: 'Top contenus' },
-  { id: 'country', label: 'Par pays' },
-  { id: 'city', label: 'Par ville' },
+  { id: 'countrycity', label: 'Pays / Ville' },
   { id: 'clicks', label: 'Éléments les plus cliqués' },
   { id: 'source', label: 'Source (navigateur)' },
   { id: 'visits', label: 'Visites par page' },
@@ -325,35 +323,19 @@ export function AnalyticsDashboard({ onClose }: { onClose: () => void }) {
                 </tbody>
               </table>
             )}
-            {tab === 'country' && (
+            {tab === 'countrycity' && (
               <table className="w-full text-left text-sm">
                 <thead>
                   <tr className="border-b border-white/20">
                     <th className="py-2">Pays</th>
-                    <th className="py-2">Visites</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.byCountry.map((r) => (
-                    <tr key={r.country} className="border-b border-white/10">
-                      <td className="py-1.5">{r.country}</td>
-                      <td className="py-1.5">{r.count}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-            {tab === 'city' && (
-              <table className="w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b border-white/20">
                     <th className="py-2">Ville</th>
                     <th className="py-2">Visites</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {data.byCity.map((r) => (
-                    <tr key={r.city} className="border-b border-white/10">
+                  {data.byCountryCity.map((r, i) => (
+                    <tr key={`${r.country}-${r.city}-${i}`} className="border-b border-white/10">
+                      <td className="py-1.5">{r.country}</td>
                       <td className="py-1.5">{r.city}</td>
                       <td className="py-1.5">{r.count}</td>
                     </tr>

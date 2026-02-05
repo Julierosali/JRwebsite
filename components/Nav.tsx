@@ -35,10 +35,11 @@ export function Nav({ visibleSectionKeys, sectionTitles }: NavProps) {
     >
       <div className="flex items-center justify-between gap-4 px-4 py-3">
         <ul className="flex flex-1 flex-wrap items-center justify-center gap-4 md:gap-6">
-          {items.map((item) => {
+          {items.map((item, index) => {
             const label = sectionTitles?.[item.key]?.trim() || item.label;
             return (
               <li key={item.href}>
+                {index > 0 && ' '}
                 <Link
                   href={item.href}
                   data-analytics-id={`menu|${label}`}

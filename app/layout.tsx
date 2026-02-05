@@ -31,12 +31,23 @@ const lora = Lora({
   display: 'swap',
 });
 
+const DEFAULT_TITLE =
+  'Julie Rosali | Artiste, auteure-compositrice-interprète — Chanson française et influences latines';
+const DEFAULT_DESCRIPTION =
+  'Julie Rosali, artiste française indépendante. Chanson française, pop émotionnelle et influences latines. Découvrez ses albums et ses concerts.';
+
 export async function generateMetadata(): Promise<Metadata> {
   const globalSeo = await getSeoSettings('_global');
+  const desc =
+    globalSeo?.meta_description?.trim() || DEFAULT_DESCRIPTION;
+  const shortDesc = desc.length > 300 ? desc.slice(0, 297).trimEnd() + '…' : desc;
   return {
     icons: globalSeo?.favicon_url ? { icon: globalSeo.favicon_url } : undefined,
-    title: { default: 'Julie Rosali | Artiste - Auteure-compositrice-interprète', template: '%s | Julie Rosali' },
-    description: 'Julie Rosali, artiste française indépendante. Chanson française, pop émotionnelle et influences latines.',
+    title: {
+      default: globalSeo?.meta_title?.trim() || DEFAULT_TITLE,
+      template: '%s | Julie Rosali',
+    },
+    description: shortDesc,
   };
 }
 

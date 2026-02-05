@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { hexToRgba } from '@/lib/style';
 
@@ -43,12 +44,16 @@ export function Header({ content }: { content: HeaderContent }) {
       style={{ aspectRatio: '1920/566' }}
     >
       {content?.logoUrl ? (
-        <img
+        <Image
           src={content.logoUrl}
           alt=""
           aria-hidden
-          className="absolute inset-0 h-full w-full object-cover"
+          fill
+          priority
+          className="object-cover"
           style={{ objectPosition: `${focusX}% ${focusY}%` }}
+          sizes="100vw"
+          unoptimized={content.logoUrl.includes('supabase.co')}
         />
       ) : null}
       <div

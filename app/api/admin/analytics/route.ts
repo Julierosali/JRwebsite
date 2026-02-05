@@ -133,20 +133,18 @@ export async function GET(req: NextRequest) {
     .sort((a, b) => b.count - a.count)
     .slice(offset, offset + perPage);
 
-  const countryCount: Record<string, number> = {};
-  const cityCount: Record<string, number> = {};
+  const countryCityCount: Record<string, number> = {};
   filtered.forEach((s) => {
     const c = (s.country as string) || 'Inconnu';
     const v = (s.city as string) || 'Inconnu';
-    countryCount[c] = (countryCount[c] || 0) + 1;
-    cityCount[v] = (cityCount[v] || 0) + 1;
+    const key = `${c}\t${v}`;
+    countryCityCount[key] = (countryCityCount[key] || 0) + 1;
   });
-  const byCountry = Object.entries(countryCount)
-    .map(([country, count]) => ({ country, count }))
-    .sort((a, b) => b.count - a.count)
-    .slice(offset, offset + perPage);
-  const byCity = Object.entries(cityCount)
-    .map(([city, count]) => ({ city, count }))
+  const byCountryCity = Object.entries(countryCityCount)
+    .map(([key, count]) => {
+      const [country, city] = key.split('\t');
+      return { country: country || 'Inconnu', city: city || 'Inconnu', count };
+    })
     .sort((a, b) => b.count - a.count)
     .slice(offset, offset + perPage);
 
@@ -211,8 +209,7 @@ export async function GET(req: NextRequest) {
       pagesPerVisit,
     },
     topContents,
-    byCountry,
-    byCity,
+    byCountryCity,
     topClicks,
     bySource,
     visitsByPage,

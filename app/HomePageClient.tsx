@@ -1,5 +1,6 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import { useState, useMemo } from 'react';
 import { useSections } from '@/hooks/useSections';
 import { useAdmin } from '@/context/AdminContext';
@@ -15,11 +16,12 @@ import { ClipsSection } from '@/components/sections/ClipsSection';
 import { SceneSection } from '@/components/sections/SceneSection';
 import { PortraitSection } from '@/components/sections/PortraitSection';
 import { ContactSection } from '@/components/sections/ContactSection';
-import { EditSectionModal } from '@/components/EditSectionModal';
-import { EditStyleModal } from '@/components/EditStyleModal';
-import { EditSeoModal } from '@/components/EditSeoModal';
-import { AnalyticsDashboard } from '@/components/AnalyticsDashboard';
 import { StyleInjector } from '@/components/StyleInjector';
+
+const EditSectionModal = dynamic(() => import('@/components/EditSectionModal').then((m) => m.EditSectionModal), { ssr: false });
+const EditStyleModal = dynamic(() => import('@/components/EditStyleModal').then((m) => m.EditStyleModal), { ssr: false });
+const EditSeoModal = dynamic(() => import('@/components/EditSeoModal').then((m) => m.EditSeoModal), { ssr: false });
+const AnalyticsDashboard = dynamic(() => import('@/components/AnalyticsDashboard').then((m) => m.AnalyticsDashboard), { ssr: false });
 import { Section } from '@/lib/supabase';
 import { clampFontSize } from '@/lib/fontSize';
 import { getSectionContent } from '@/lib/locale';

@@ -6,7 +6,8 @@ import { SeoJsonLd } from '@/components/SeoJsonLd';
 
 export async function generateMetadata(): Promise<Metadata> {
   const seo = await getSeoSettings('/');
-  return buildMetadataFromSeo(seo);
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? '';
+  return buildMetadataFromSeo(seo, { baseUrl });
 }
 
 export default function HomePage() {

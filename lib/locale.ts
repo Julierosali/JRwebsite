@@ -44,7 +44,7 @@ export function isBilingualContent(
   return 'fr' in content || 'es' in content;
 }
 
-/** Champs communs à toutes les langues (visuels, réglages) : lus à la racine ou dans fr. */
+/** Champs communs à toutes les langues (visuels, réglages, galeries) : lus à la racine ou dans fr. */
 const SHARED_KEYS = [
   'titleFontSize',
   'textFontSize',
@@ -53,6 +53,8 @@ const SHARED_KEYS = [
   'focusY',
   'overlayColor',
   'overlayOpacity',
+  'images',
+  'scrollSpeed',
 ];
 
 /**

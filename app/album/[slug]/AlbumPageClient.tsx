@@ -1,5 +1,6 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -11,8 +12,9 @@ import { getYoutubeIdFromUrl } from '@/lib/youtube';
 import { useAdmin } from '@/context/AdminContext';
 import { useLocale } from '@/context/LocaleContext';
 import { getSectionContent } from '@/lib/locale';
-import { EditAlbumPageModal } from '@/components/EditAlbumPageModal';
-import { AnalyticsDashboard } from '@/components/AnalyticsDashboard';
+
+const EditAlbumPageModal = dynamic(() => import('@/components/EditAlbumPageModal').then((m) => m.EditAlbumPageModal), { ssr: false });
+const AnalyticsDashboard = dynamic(() => import('@/components/AnalyticsDashboard').then((m) => m.AnalyticsDashboard), { ssr: false });
 
 type AlbumContent = {
   title?: string;
