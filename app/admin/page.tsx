@@ -29,6 +29,7 @@ export default function AdminPage() {
       setError(err.message ?? 'Erreur de connexion');
       return;
     }
+    router.push('/');
   };
 
   if (loading) {

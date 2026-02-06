@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS public.analytics_sessions (
   browser text,
   device text,
   os text,
+  user_agent text,
   is_authenticated boolean NOT NULL DEFAULT false,
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()
@@ -111,8 +112,9 @@ CREATE POLICY "site_settings_update"
   ON public.site_settings FOR UPDATE
   USING (EXISTS (SELECT 1 FROM public.admin_users WHERE id = auth.uid()));
 
--- Insert initial analytics_ip_filter (exécuter en tant qu'admin ou avec service_role)
+-- Insert initial analytics_ip_filter et analytics_exclude_bots (exécuter en tant qu'admin ou avec service_role)
 INSERT INTO public.site_settings (key, value) VALUES
-  ('analytics_ip_filter', '{"include":[],"exclude":[],"excludeHashes":[]}'::jsonb)
+  ('analytics_ip_filter', '{"include":[],"exclude":[],"excludeHashes":[]}'::jsonb),
+  ('analytics_exclude_bots', '{"excludeBots":true}'::jsonb)
 ON CONFLICT (key) DO NOTHING;
 -- Si l'INSERT échoue (RLS), créer la ligne manuellement en SQL après connexion admin.

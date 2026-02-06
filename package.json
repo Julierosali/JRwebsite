@@ -6,14 +6,15 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "clean": "node -e \"require('fs').rmSync('.next',{recursive:true,force:true})\""
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",
-    "next": "14.2.21",
+    "framer-motion": "^11.11.17",
+    "next": "14.2.35",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "framer-motion": "^11.11.17"
+    "react-dom": "^18.3.1"
   },
   "devDependencies": {
     "@types/node": "^22.9.0",

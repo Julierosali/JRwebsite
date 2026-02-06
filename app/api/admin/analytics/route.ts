@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient, getAdminIdFromRequest } from '@/lib/supabase-server';
 import { createHash } from 'crypto';
+import { isLikelyBot } from '@/lib/bot-detection';
 
 const SALT = process.env.ANALYTICS_IP_SALT || 'julie-rosali-analytics-v1';
 
@@ -8,7 +9,7 @@ function hashIp(ip: string): string {
   return createHash('sha256').update(SALT + ip.trim()).digest('hex');
 }
 
-type Filter = { include?: string[]; exclude?: string[]; excludeHashes?: string[] };
+type Filter = { include?: string[]; exclude?: string[]; excludeHashes?: string[]; excludeBots?: boolean };
 
 function getDateRange(period: string, days?: number): { from: string; to: string } {
   const now = new Date();
@@ -48,7 +49,7 @@ export async function GET(req: NextRequest) {
 
   const { from, to } = getDateRange(period, days);
 
-  let filter: Filter = { include: [], exclude: [], excludeHashes: [] };
+  let filter: Filter = { include: [], exclude: [], excludeHashes: [], excludeBots: true };
   const { data: settingsRow } = await supabase
     .from('site_settings')
     .select('value')
@@ -60,12 +61,22 @@ export async function GET(req: NextRequest) {
       include: Array.isArray(v.include) ? v.include as string[] : [],
       exclude: Array.isArray(v.exclude) ? v.exclude as string[] : [],
       excludeHashes: Array.isArray(v.excludeHashes) ? v.excludeHashes as string[] : [],
+      excludeBots: filter.excludeBots,
     };
+  }
+  const { data: botsRow } = await supabase
+    .from('site_settings')
+    .select('value')
+    .eq('key', 'analytics_exclude_bots')
+    .maybeSingle();
+  if (botsRow?.value && typeof botsRow.value === 'object') {
+    const v = botsRow.value as { excludeBots?: boolean };
+    filter.excludeBots = v.excludeBots !== false;
   }
 
   const { data: sessions, error: sessionsError } = await supabase
     .from('analytics_sessions')
-    .select('session_id, ip_hash, ip, country, city, referrer, browser, device, os, created_at')
+    .select('session_id, ip_hash, ip, country, city, referrer, browser, device, os, user_agent, created_at')
     .eq('is_authenticated', false)
     .gte('created_at', from)
     .lte('created_at', to)
@@ -86,6 +97,7 @@ export async function GET(req: NextRequest) {
     const h = s.ip_hash as string;
     if (excludeHashes.has(h)) return false;
     if ((filter.include?.length ?? 0) > 0 && !includeHashes.has(h)) return false;
+    if (filter.excludeBots !== false && isLikelyBot(s.user_agent as string | null)) return false;
     return true;
   });
 
@@ -200,7 +212,7 @@ export async function GET(req: NextRequest) {
     .slice(offset, offset + perPage);
 
   return NextResponse.json({
-    filter: { include: filter.include || [], exclude: filter.exclude || [], excludeHashes: filter.excludeHashes || [] },
+    filter: { include: filter.include || [], exclude: filter.exclude || [], excludeHashes: filter.excludeHashes || [], excludeBots: filter.excludeBots !== false },
     kpis: {
       uniqueVisitors: uniqueVisitors,
       totalViews,

@@ -10,6 +10,8 @@ function hashIp(ip: string): string {
 
 export async function POST(req: NextRequest) {
   try {
+    const userAgent = req.headers.get('user-agent') ?? '';
+
     const body = await req.json();
     const {
       session_id,
@@ -58,6 +60,7 @@ export async function POST(req: NextRequest) {
       browser: browser ?? null,
       device: device ?? null,
       os: os ?? null,
+      user_agent: userAgent || null,
       is_authenticated: false,
       updated_at: new Date().toISOString(),
     };

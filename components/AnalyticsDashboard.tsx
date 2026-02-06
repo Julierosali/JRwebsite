@@ -72,6 +72,8 @@ export function AnalyticsDashboard({ onClose }: { onClose: () => void }) {
   const [selectedHashes, setSelectedHashes] = useState<Set<string>>(new Set());
   const [visitorFeedback, setVisitorFeedback] = useState<string | null>(null);
   const [purgeFeedback, setPurgeFeedback] = useState<string | null>(null);
+  const [excludeBots, setExcludeBots] = useState<boolean>(true);
+  const [excludeBotsSaving, setExcludeBotsSaving] = useState(false);
   const filterLoadedRef = useRef(false);
 
   const load = useCallback(async () => {
@@ -103,6 +105,9 @@ export function AnalyticsDashboard({ onClose }: { onClose: () => void }) {
       setFilterInclude((json.filter.include || []).join('\n'));
       setFilterExclude((json.filter.exclude || []).join('\n'));
       setFilterExcludeHashes((json.filter.excludeHashes || []).join('\n'));
+    }
+    if (typeof json.filter?.excludeBots === 'boolean') {
+      setExcludeBots(json.filter.excludeBots);
     }
     setLoading(false);
   }, [user, periodKey, page]);
@@ -158,23 +163,71 @@ export function AnalyticsDashboard({ onClose }: { onClose: () => void }) {
     setTimeout(() => setVisitorFeedback(null), 3000);
   };
 
+  const [excludeBotsMassSaving, setExcludeBotsMassSaving] = useState(false);
+
+  const excludeBotsInMass = async () => {
+    if (!user) return;
+    setExcludeBotsMassSaving(true);
+    setPurgeFeedback(null);
+    try {
+      const res = await fetchWithAuth('/api/admin/analytics/bot-hashes');
+      if (!res.ok) {
+        setPurgeFeedback('Erreur lors de la récupération des hashes bots.');
+        setTimeout(() => setPurgeFeedback(null), 4000);
+        setExcludeBotsMassSaving(false);
+        return;
+      }
+      const { hashes } = await res.json();
+      const current = filterExcludeHashes.trim().split(/\n/).map((s) => s.trim()).filter(Boolean);
+      const merged = [...new Set([...current, ...(hashes || [])])];
+      const include = filterInclude.trim().split(/\n/).map((s) => s.trim()).filter(Boolean);
+      const exclude = filterExclude.trim().split(/\n/).map((s) => s.trim()).filter(Boolean);
+      const resFilter = await fetchWithAuth('/api/admin/analytics/filter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ include, exclude, excludeHashes: merged }),
+      });
+      setExcludeBotsMassSaving(false);
+      if (resFilter.ok) {
+        setFilterExcludeHashes(merged.join('\n'));
+        filterLoadedRef.current = true;
+        setPurgeFeedback(`${(hashes || []).length} hash(es) bots ajouté(s) au filtre d'exclusion.`);
+        setTimeout(() => setPurgeFeedback(null), 5000);
+        load();
+      } else {
+        setPurgeFeedback('Erreur lors de l\'enregistrement du filtre.');
+        setTimeout(() => setPurgeFeedback(null), 4000);
+      }
+    } catch {
+      setExcludeBotsMassSaving(false);
+      setPurgeFeedback('Erreur : exclusion en masse impossible.');
+      setTimeout(() => setPurgeFeedback(null), 4000);
+    }
+  };
+
   const selectSameCountryCity = () => {
     const first = data?.visitors.find((v) => selectedHashes.has(v.ip_hash));
     if (!first || !data) return;
-    const next = new Set<string>();
-    data.visitors.forEach((v) => {
-      if (v.country === first.country && v.city === first.city) next.add(v.ip_hash);
+    const norm = (s: string | null | undefined) => (s ?? '').trim().toLowerCase();
+    const countryNorm = norm(first.country);
+    const cityNorm = norm(first.city);
+    setSelectedHashes((prev) => {
+      const next = new Set(prev);
+      data.visitors.forEach((v) => {
+        if (norm(v.country) === countryNorm && norm(v.city) === cityNorm) next.add(v.ip_hash);
+      });
+      return next;
     });
-    setSelectedHashes(next);
   };
 
-  const runPurge = async (mode: '3months' | '1month' | 'all' | 'ips', ips?: string[]) => {
+  const runPurge = async (mode: '3months' | '1month' | 'all' | 'bots' | 'ips', ips?: string[]) => {
     if (!user) return;
     setPurgeFeedback(null);
     let url = '/api/admin/analytics/purge';
     let body: string | undefined;
     if (mode === 'all') url += '?all=1';
     else if (mode === '1month') url += '?olderThan=1month';
+    else if (mode === 'bots') url += '?bots=1';
     else if (mode === 'ips' && ips && ips.length > 0) {
       body = JSON.stringify({ ips });
     }
@@ -191,7 +244,11 @@ export function AnalyticsDashboard({ onClose }: { onClose: () => void }) {
         return;
       }
       const msg = json.purged
-        ? (json.purged === 'all' ? 'Toutes les stats ont été purgées.' : `${json.purged} — ${json.count ?? 0} session(s) supprimée(s).`)
+        ? json.purged === 'all'
+          ? 'Toutes les stats ont été purgées.'
+          : json.purged === 'bots'
+            ? `Traces bots supprimées : ${json.count ?? 0} session(s) purgée(s).`
+            : `${json.purged} — ${json.count ?? 0} session(s) supprimée(s).`
         : 'Purge effectuée.';
       setPurgeFeedback(msg);
       setTimeout(() => setPurgeFeedback(null), 5000);
@@ -212,9 +269,40 @@ export function AnalyticsDashboard({ onClose }: { onClose: () => void }) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-4">
-          <div>
+          <div className="min-w-0 flex-1">
             <h3 className="text-xl font-bold">Statistiques</h3>
             <p className="mt-1 text-sm text-white/70">Analytics sans cookies, respectueux de la vie privée.</p>
+            <div className="mt-3 rounded-lg border border-violet/50 bg-violet/10 px-3 py-2">
+              <p className="text-xs font-medium uppercase tracking-wide text-violet-200">Réglage bots</p>
+              <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                <span className="text-sm text-white/90">Exclure crawlers / bots des stats :</span>
+                <button
+                  type="button"
+                  disabled={excludeBotsSaving}
+                  onClick={async () => {
+                    if (!user) return;
+                    setExcludeBotsSaving(true);
+                    const next = !excludeBots;
+                    const res = await fetchWithAuth('/api/admin/analytics/settings', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ excludeBots: next }),
+                    });
+                    setExcludeBotsSaving(false);
+                    if (res.ok) {
+                      setExcludeBots(next);
+                      load();
+                    }
+                  }}
+                  className={`rounded px-3 py-1.5 text-sm font-medium transition ${excludeBots ? 'bg-violet/80 text-white' : 'bg-white/20 text-white/90 hover:bg-white/30'}`}
+                >
+                  {excludeBots ? 'Activé' : 'Désactivé'}
+                </button>
+                <span className="text-xs text-white/60">
+                  {excludeBots ? 'Bots exclus des chiffres.' : 'Bots inclus dans les chiffres.'}
+                </span>
+              </div>
+            </div>
           </div>
           <button
             type="button"
@@ -527,8 +615,30 @@ export function AnalyticsDashboard({ onClose }: { onClose: () => void }) {
                 {purgeFeedback}
               </p>
             )}
+            <div className="rounded-lg border-2 border-amber-500/50 bg-amber-900/20 p-4">
+              <p className="text-sm font-bold text-amber-200">Bots : exclure ou purger</p>
+              <p className="mt-1 text-xs text-white/70">Exclure en masse = ajouter les hash des sessions bots au filtre (ils disparaissent des stats). Purger = supprimer définitivement ces sessions de la base.</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  disabled={excludeBotsMassSaving}
+                  onClick={excludeBotsInMass}
+                  className="rounded bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-500 disabled:opacity-50"
+                >
+                  Exclure en masse les bots (ajouter au filtre)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => runPurge('bots')}
+                  className="rounded bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-500"
+                >
+                  Purger uniquement les traces bots
+                </button>
+              </div>
+            </div>
             <div className="rounded border border-white/20 p-4">
               <p className="text-sm font-medium text-white/90">Purger les données</p>
+              <p className="mt-1 text-xs text-white/60">Purger par période ou tout supprimer.</p>
               <div className="mt-2 flex flex-wrap gap-2">
                 <button
                   type="button"

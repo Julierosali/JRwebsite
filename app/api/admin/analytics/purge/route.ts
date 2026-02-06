@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient, getAdminIdFromRequest } from '@/lib/supabase-server';
 import { createHash } from 'crypto';
+import { isLikelyBot } from '@/lib/bot-detection';
 
 const SALT = process.env.ANALYTICS_IP_SALT || 'julie-rosali-analytics-v1';
 
@@ -31,6 +32,26 @@ export async function POST(req: NextRequest) {
     body = await req.json();
   } catch {
     // no body
+  }
+
+  const botsOnly = searchParams.get('bots') === '1';
+
+  if (botsOnly) {
+    const { data: sessions } = await supabase
+      .from('analytics_sessions')
+      .select('session_id, user_agent');
+    const botSessionIds = (sessions || [])
+      .filter((s) => isLikelyBot(s.user_agent as string | null))
+      .map((s) => s.session_id);
+    let deleted = 0;
+    const batchSize = 500;
+    for (let i = 0; i < botSessionIds.length; i += batchSize) {
+      const batch = botSessionIds.slice(i, i + batchSize);
+      await supabase.from('analytics_events').delete().in('session_id', batch);
+      const { error } = await supabase.from('analytics_sessions').delete().in('session_id', batch);
+      if (!error) deleted += batch.length;
+    }
+    return NextResponse.json({ ok: true, purged: 'bots', count: deleted });
   }
 
   if (all) {
