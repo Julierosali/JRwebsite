@@ -179,7 +179,7 @@ export function AnalyticsDashboard({ onClose }: { onClose: () => void }) {
       }
       const { hashes } = await res.json();
       const current = filterExcludeHashes.trim().split(/\n/).map((s) => s.trim()).filter(Boolean);
-      const merged = [...new Set([...current, ...(hashes || [])])];
+      const merged = Array.from(new Set([...current, ...(hashes || [])]));
       const include = filterInclude.trim().split(/\n/).map((s) => s.trim()).filter(Boolean);
       const exclude = filterExclude.trim().split(/\n/).map((s) => s.trim()).filter(Boolean);
       const resFilter = await fetchWithAuth('/api/admin/analytics/filter', {
