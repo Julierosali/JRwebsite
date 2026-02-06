@@ -838,6 +838,23 @@ export function AnalyticsDashboard({ onClose }: { onClose: () => void }) {
                   rows={2}
                   className="mt-1 w-full rounded border border-white/30 bg-black/30 px-2 py-1 font-mono text-sm text-white"
                 />
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const res = await fetchWithAuth('/api/admin/analytics/my-ip');
+                    if (res.ok) {
+                      const { ip } = await res.json();
+                      if (ip) {
+                        const current = filterExclude.trim();
+                        const newValue = current ? `${current}\n${ip}` : ip;
+                        setFilterExclude(newValue);
+                      }
+                    }
+                  }}
+                  className="mt-1 rounded bg-white/20 px-2 py-1 text-xs hover:bg-white/30"
+                >
+                  + Ajouter mon IP
+                </button>
               </div>
             </div>
             <div className="mt-4">
