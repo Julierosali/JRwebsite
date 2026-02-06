@@ -124,8 +124,9 @@ export async function GET(req: NextRequest) {
 
   const eventsList = events || [];
   // Filtrer les événements avec durée < 1 seconde si le filtre est actif
+  // On ne garde que les événements avec duration >= 1 (pas ceux sans duration)
   const filteredEventsList = filter.excludeShortVisits !== false
-    ? eventsList.filter((e) => !e.duration || e.duration >= 1)
+    ? eventsList.filter((e) => e.duration != null && e.duration >= 1)
     : eventsList;
   const pageviews = filteredEventsList.filter((e) => e.event_type === 'pageview');
   const clicks = filteredEventsList.filter((e) => e.event_type === 'click');
