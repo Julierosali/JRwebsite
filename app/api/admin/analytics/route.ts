@@ -9,7 +9,7 @@ function hashIp(ip: string): string {
   return createHash('sha256').update(SALT + ip.trim()).digest('hex');
 }
 
-type Filter = { include?: string[]; exclude?: string[]; excludeHashes?: string[]; excludeBots?: boolean };
+type Filter = { include?: string[]; exclude?: string[]; excludeHashes?: string[]; excludeBots?: boolean; excludeShortVisits?: boolean };
 
 function getDateRange(period: string, days?: number): { from: string; to: string } {
   const now = new Date();
@@ -49,7 +49,7 @@ export async function GET(req: NextRequest) {
 
   const { from, to } = getDateRange(period, days);
 
-  let filter: Filter = { include: [], exclude: [], excludeHashes: [], excludeBots: true };
+  let filter: Filter = { include: [], exclude: [], excludeHashes: [], excludeBots: true, excludeShortVisits: true };
   const { data: settingsRow } = await supabase
     .from('site_settings')
     .select('value')
@@ -62,6 +62,7 @@ export async function GET(req: NextRequest) {
       exclude: Array.isArray(v.exclude) ? v.exclude as string[] : [],
       excludeHashes: Array.isArray(v.excludeHashes) ? v.excludeHashes as string[] : [],
       excludeBots: filter.excludeBots,
+      excludeShortVisits: filter.excludeShortVisits,
     };
   }
   const { data: botsRow } = await supabase
@@ -72,6 +73,15 @@ export async function GET(req: NextRequest) {
   if (botsRow?.value && typeof botsRow.value === 'object') {
     const v = botsRow.value as { excludeBots?: boolean };
     filter.excludeBots = v.excludeBots !== false;
+  }
+  const { data: shortVisitsRow } = await supabase
+    .from('site_settings')
+    .select('value')
+    .eq('key', 'analytics_exclude_short_visits')
+    .maybeSingle();
+  if (shortVisitsRow?.value && typeof shortVisitsRow.value === 'object') {
+    const v = shortVisitsRow.value as { excludeShortVisits?: boolean };
+    filter.excludeShortVisits = v.excludeShortVisits !== false;
   }
 
   const { data: sessions, error: sessionsError } = await supabase
@@ -113,8 +123,12 @@ export async function GET(req: NextRequest) {
   }
 
   const eventsList = events || [];
-  const pageviews = eventsList.filter((e) => e.event_type === 'pageview');
-  const clicks = eventsList.filter((e) => e.event_type === 'click');
+  // Filtrer les événements avec durée < 1 seconde si le filtre est actif
+  const filteredEventsList = filter.excludeShortVisits !== false
+    ? eventsList.filter((e) => !e.duration || e.duration >= 1)
+    : eventsList;
+  const pageviews = filteredEventsList.filter((e) => e.event_type === 'pageview');
+  const clicks = filteredEventsList.filter((e) => e.event_type === 'click');
 
   const uniqueVisitors = filtered.length;
   const totalViews = pageviews.length;
@@ -136,26 +150,55 @@ export async function GET(req: NextRequest) {
       : 0;
 
   const pathCount: Record<string, number> = {};
+  const pathDuration: Record<string, number[]> = {};
   pageviews.forEach((e) => {
     const p = (e.path as string) || '';
     pathCount[p] = (pathCount[p] || 0) + 1;
+    if (e.duration != null && e.duration > 0) {
+      if (!pathDuration[p]) pathDuration[p] = [];
+      pathDuration[p].push(e.duration);
+    }
   });
   const topContents = Object.entries(pathCount)
-    .map(([path, count]) => ({ path: path || '/', count }))
+    .map(([path, count]) => {
+      const durations = pathDuration[path] || [];
+      const avgDur = durations.length > 0
+        ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length)
+        : 0;
+      return { path: path || '/', count, avgDuration: avgDur };
+    })
     .sort((a, b) => b.count - a.count)
     .slice(offset, offset + perPage);
 
   const countryCityCount: Record<string, number> = {};
+  const countryCityDuration: Record<string, number[]> = {};
+  // Créer un mapping session_id -> pays/ville
+  const sessionToCountryCity: Record<string, { country: string; city: string }> = {};
   filtered.forEach((s) => {
-    const c = (s.country as string) || 'Inconnu';
-    const v = (s.city as string) || 'Inconnu';
-    const key = `${c}\t${v}`;
+    sessionToCountryCity[s.session_id as string] = {
+      country: (s.country as string) || 'Inconnu',
+      city: (s.city as string) || 'Inconnu',
+    };
+  });
+  // Calculer les stats par pays/ville via les événements
+  pageviews.forEach((e) => {
+    const loc = sessionToCountryCity[e.session_id as string];
+    if (!loc) return;
+    const key = `${loc.country}\t${loc.city}`;
     countryCityCount[key] = (countryCityCount[key] || 0) + 1;
+    if (e.duration != null && e.duration > 0) {
+      if (!countryCityDuration[key]) countryCityDuration[key] = [];
+      countryCityDuration[key].push(e.duration);
+    }
   });
   const byCountryCity = Object.entries(countryCityCount)
     .map(([key, count]) => {
       const [country, city] = key.split('\t');
-      return { country: country || 'Inconnu', city: city || 'Inconnu', count };
+      const durations = countryCityDuration[key] || [];
+      const avgDur = durations.length > 0
+        ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length)
+        : 0;
+      return { country: country || 'Inconnu', city: city || 'Inconnu', count, avgDuration: avgDur };
     })
     .sort((a, b) => b.count - a.count)
     .slice(offset, offset + perPage);
@@ -186,7 +229,13 @@ export async function GET(req: NextRequest) {
     .slice(offset, offset + perPage);
 
   const visitsByPage = Object.entries(pathCount)
-    .map(([path, count]) => ({ path: path || '/', count }))
+    .map(([path, count]) => {
+      const durations = pathDuration[path] || [];
+      const avgDur = durations.length > 0
+        ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length)
+        : 0;
+      return { path: path || '/', count, avgDuration: avgDur };
+    })
     .sort((a, b) => b.count - a.count)
     .slice(offset, offset + perPage);
 
@@ -212,7 +261,7 @@ export async function GET(req: NextRequest) {
     .slice(offset, offset + perPage);
 
   return NextResponse.json({
-    filter: { include: filter.include || [], exclude: filter.exclude || [], excludeHashes: filter.excludeHashes || [], excludeBots: filter.excludeBots !== false },
+    filter: { include: filter.include || [], exclude: filter.exclude || [], excludeHashes: filter.excludeHashes || [], excludeBots: filter.excludeBots !== false, excludeShortVisits: filter.excludeShortVisits !== false },
     kpis: {
       uniqueVisitors: uniqueVisitors,
       totalViews,

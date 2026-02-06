@@ -35,6 +35,7 @@ export async function POST(req: NextRequest) {
   }
 
   const botsOnly = searchParams.get('bots') === '1';
+  const shortVisitsOnly = searchParams.get('shortVisits') === '1';
 
   if (botsOnly) {
     const { data: sessions } = await supabase
@@ -52,6 +53,55 @@ export async function POST(req: NextRequest) {
       if (!error) deleted += batch.length;
     }
     return NextResponse.json({ ok: true, purged: 'bots', count: deleted });
+  }
+
+  if (shortVisitsOnly) {
+    // Récupérer toutes les sessions avec leurs événements
+    const { data: sessions } = await supabase
+      .from('analytics_sessions')
+      .select('session_id, ip_hash');
+    
+    if (!sessions || sessions.length === 0) {
+      return NextResponse.json({ ok: true, purged: 'shortVisits', count: 0 });
+    }
+
+    // Récupérer tous les événements avec durée
+    const { data: events } = await supabase
+      .from('analytics_events')
+      .select('session_id, duration');
+
+    const eventsBySession: Record<string, { duration: number | null }[]> = {};
+    (events || []).forEach((e) => {
+      const sid = e.session_id as string;
+      if (!eventsBySession[sid]) eventsBySession[sid] = [];
+      eventsBySession[sid].push({ duration: e.duration as number | null });
+    });
+
+    // Identifier les sessions avec uniquement des visites < 1 sec
+    const shortVisitSessionIds: string[] = [];
+    sessions.forEach((s) => {
+      const sid = s.session_id as string;
+      const sessionEvents = eventsBySession[sid] || [];
+      
+      if (sessionEvents.length > 0) {
+        const hasOnlyShortVisits = sessionEvents.every(
+          (e) => e.duration === null || e.duration < 1
+        );
+        if (hasOnlyShortVisits) {
+          shortVisitSessionIds.push(sid);
+        }
+      }
+    });
+
+    let deleted = 0;
+    const batchSize = 500;
+    for (let i = 0; i < shortVisitSessionIds.length; i += batchSize) {
+      const batch = shortVisitSessionIds.slice(i, i + batchSize);
+      await supabase.from('analytics_events').delete().in('session_id', batch);
+      const { error } = await supabase.from('analytics_sessions').delete().in('session_id', batch);
+      if (!error) deleted += batch.length;
+    }
+    return NextResponse.json({ ok: true, purged: 'shortVisits', count: deleted });
   }
 
   if (all) {

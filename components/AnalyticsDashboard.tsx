@@ -15,11 +15,11 @@ type KPIs = {
 type AnalyticsData = {
   filter?: { include: string[]; exclude: string[]; excludeHashes: string[] };
   kpis: KPIs;
-  topContents: { path: string; count: number }[];
-  byCountryCity: { country: string; city: string; count: number }[];
+  topContents: { path: string; count: number; avgDuration: number }[];
+  byCountryCity: { country: string; city: string; count: number; avgDuration: number }[];
   topClicks: { element_id: string; count: number }[];
   bySource: { referrer: string; browser: string; count: number }[];
-  visitsByPage: { path: string; count: number }[];
+  visitsByPage: { path: string; count: number; avgDuration: number }[];
   visitors: { ip_hash: string; ip: string | null; country: string; city: string; sessionCount: number }[];
   period: { from: string; to: string };
   page: number;
@@ -74,6 +74,8 @@ export function AnalyticsDashboard({ onClose }: { onClose: () => void }) {
   const [purgeFeedback, setPurgeFeedback] = useState<string | null>(null);
   const [excludeBots, setExcludeBots] = useState<boolean>(true);
   const [excludeBotsSaving, setExcludeBotsSaving] = useState(false);
+  const [excludeShortVisits, setExcludeShortVisits] = useState<boolean>(true);
+  const [excludeShortVisitsSaving, setExcludeShortVisitsSaving] = useState(false);
   const filterLoadedRef = useRef(false);
 
   const load = useCallback(async () => {
@@ -108,6 +110,9 @@ export function AnalyticsDashboard({ onClose }: { onClose: () => void }) {
     }
     if (typeof json.filter?.excludeBots === 'boolean') {
       setExcludeBots(json.filter.excludeBots);
+    }
+    if (typeof json.filter?.excludeShortVisits === 'boolean') {
+      setExcludeShortVisits(json.filter.excludeShortVisits);
     }
     setLoading(false);
   }, [user, periodKey, page]);
@@ -164,6 +169,7 @@ export function AnalyticsDashboard({ onClose }: { onClose: () => void }) {
   };
 
   const [excludeBotsMassSaving, setExcludeBotsMassSaving] = useState(false);
+  const [excludeShortVisitsMassSaving, setExcludeShortVisitsMassSaving] = useState(false);
 
   const excludeBotsInMass = async () => {
     if (!user) return;
@@ -205,6 +211,46 @@ export function AnalyticsDashboard({ onClose }: { onClose: () => void }) {
     }
   };
 
+  const excludeShortVisitsInMass = async () => {
+    if (!user) return;
+    setExcludeShortVisitsMassSaving(true);
+    setPurgeFeedback(null);
+    try {
+      const res = await fetchWithAuth('/api/admin/analytics/short-visits-hashes');
+      if (!res.ok) {
+        setPurgeFeedback('Erreur lors de la récupération des hashes des visites courtes.');
+        setTimeout(() => setPurgeFeedback(null), 4000);
+        setExcludeShortVisitsMassSaving(false);
+        return;
+      }
+      const { hashes } = await res.json();
+      const current = filterExcludeHashes.trim().split(/\n/).map((s) => s.trim()).filter(Boolean);
+      const merged = Array.from(new Set([...current, ...(hashes || [])]));
+      const include = filterInclude.trim().split(/\n/).map((s) => s.trim()).filter(Boolean);
+      const exclude = filterExclude.trim().split(/\n/).map((s) => s.trim()).filter(Boolean);
+      const resFilter = await fetchWithAuth('/api/admin/analytics/filter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ include, exclude, excludeHashes: merged }),
+      });
+      setExcludeShortVisitsMassSaving(false);
+      if (resFilter.ok) {
+        setFilterExcludeHashes(merged.join('\n'));
+        filterLoadedRef.current = true;
+        setPurgeFeedback(`${(hashes || []).length} hash(es) de visites courtes ajouté(s) au filtre d'exclusion.`);
+        setTimeout(() => setPurgeFeedback(null), 5000);
+        load();
+      } else {
+        setPurgeFeedback('Erreur lors de l\'enregistrement du filtre.');
+        setTimeout(() => setPurgeFeedback(null), 4000);
+      }
+    } catch {
+      setExcludeShortVisitsMassSaving(false);
+      setPurgeFeedback('Erreur : exclusion en masse impossible.');
+      setTimeout(() => setPurgeFeedback(null), 4000);
+    }
+  };
+
   const selectSameCountryCity = () => {
     const first = data?.visitors.find((v) => selectedHashes.has(v.ip_hash));
     if (!first || !data) return;
@@ -220,7 +266,7 @@ export function AnalyticsDashboard({ onClose }: { onClose: () => void }) {
     });
   };
 
-  const runPurge = async (mode: '3months' | '1month' | 'all' | 'bots' | 'ips', ips?: string[]) => {
+  const runPurge = async (mode: '3months' | '1month' | 'all' | 'bots' | 'ips' | 'shortVisits', ips?: string[]) => {
     if (!user) return;
     setPurgeFeedback(null);
     let url = '/api/admin/analytics/purge';
@@ -228,6 +274,7 @@ export function AnalyticsDashboard({ onClose }: { onClose: () => void }) {
     if (mode === 'all') url += '?all=1';
     else if (mode === '1month') url += '?olderThan=1month';
     else if (mode === 'bots') url += '?bots=1';
+    else if (mode === 'shortVisits') url += '?shortVisits=1';
     else if (mode === 'ips' && ips && ips.length > 0) {
       body = JSON.stringify({ ips });
     }
@@ -248,6 +295,8 @@ export function AnalyticsDashboard({ onClose }: { onClose: () => void }) {
           ? 'Toutes les stats ont été purgées.'
           : json.purged === 'bots'
             ? `Traces bots supprimées : ${json.count ?? 0} session(s) purgée(s).`
+            : json.purged === 'shortVisits'
+            ? `Visites courtes supprimées : ${json.count ?? 0} session(s) purgée(s).`
             : `${json.purged} — ${json.count ?? 0} session(s) supprimée(s).`
         : 'Purge effectuée.';
       setPurgeFeedback(msg);
@@ -300,6 +349,34 @@ export function AnalyticsDashboard({ onClose }: { onClose: () => void }) {
                 </button>
                 <span className="text-xs text-white/60">
                   {excludeBots ? 'Bots exclus des chiffres.' : 'Bots inclus dans les chiffres.'}
+                </span>
+              </div>
+              <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                <span className="text-sm text-white/90">Exclure visites &lt; 1 sec :</span>
+                <button
+                  type="button"
+                  disabled={excludeShortVisitsSaving}
+                  onClick={async () => {
+                    if (!user) return;
+                    setExcludeShortVisitsSaving(true);
+                    const next = !excludeShortVisits;
+                    const res = await fetchWithAuth('/api/admin/analytics/settings', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ excludeShortVisits: next }),
+                    });
+                    setExcludeShortVisitsSaving(false);
+                    if (res.ok) {
+                      setExcludeShortVisits(next);
+                      load();
+                    }
+                  }}
+                  className={`rounded px-3 py-1.5 text-sm font-medium transition ${excludeShortVisits ? 'bg-violet/80 text-white' : 'bg-white/20 text-white/90 hover:bg-white/30'}`}
+                >
+                  {excludeShortVisits ? 'Activé' : 'Désactivé'}
+                </button>
+                <span className="text-xs text-white/60">
+                  {excludeShortVisits ? 'Visites < 1 sec exclues.' : 'Visites courtes incluses.'}
                 </span>
               </div>
             </div>
@@ -399,6 +476,7 @@ export function AnalyticsDashboard({ onClose }: { onClose: () => void }) {
                   <tr className="border-b border-white/20">
                     <th className="py-2">Page</th>
                     <th className="py-2">Vues</th>
+                    <th className="py-2">Temps moy.</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -406,6 +484,7 @@ export function AnalyticsDashboard({ onClose }: { onClose: () => void }) {
                     <tr key={r.path} className="border-b border-white/10">
                       <td className="py-1.5">{pathLabel(r.path)}</td>
                       <td className="py-1.5">{r.count}</td>
+                      <td className="py-1.5">{r.avgDuration > 0 ? `${r.avgDuration}s` : '—'}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -418,6 +497,7 @@ export function AnalyticsDashboard({ onClose }: { onClose: () => void }) {
                     <th className="py-2">Pays</th>
                     <th className="py-2">Ville</th>
                     <th className="py-2">Visites</th>
+                    <th className="py-2">Temps moy.</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -426,6 +506,7 @@ export function AnalyticsDashboard({ onClose }: { onClose: () => void }) {
                       <td className="py-1.5">{r.country}</td>
                       <td className="py-1.5">{r.city}</td>
                       <td className="py-1.5">{r.count}</td>
+                      <td className="py-1.5">{r.avgDuration > 0 ? `${r.avgDuration}s` : '—'}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -475,6 +556,7 @@ export function AnalyticsDashboard({ onClose }: { onClose: () => void }) {
                   <tr className="border-b border-white/20">
                     <th className="py-2">Page</th>
                     <th className="py-2">Visites</th>
+                    <th className="py-2">Temps moy.</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -482,6 +564,7 @@ export function AnalyticsDashboard({ onClose }: { onClose: () => void }) {
                     <tr key={r.path} className="border-b border-white/10">
                       <td className="py-1.5">{pathLabel(r.path)}</td>
                       <td className="py-1.5">{r.count}</td>
+                      <td className="py-1.5">{r.avgDuration > 0 ? `${r.avgDuration}s` : '—'}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -615,6 +698,27 @@ export function AnalyticsDashboard({ onClose }: { onClose: () => void }) {
                 {purgeFeedback}
               </p>
             )}
+            <div className="rounded-lg border-2 border-cyan-500/50 bg-cyan-900/20 p-4">
+              <p className="text-sm font-bold text-cyan-200">Visites courtes (&lt; 1 sec) : exclure ou purger</p>
+              <p className="mt-1 text-xs text-white/70">Exclure en masse = ajouter les hash des sessions avec visites &lt; 1 sec au filtre. Purger = supprimer définitivement ces sessions de la base.</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  disabled={excludeShortVisitsMassSaving}
+                  onClick={excludeShortVisitsInMass}
+                  className="rounded bg-cyan-600 px-4 py-2 text-sm font-medium text-white hover:bg-cyan-500 disabled:opacity-50"
+                >
+                  Exclure en masse les visites courtes (ajouter au filtre)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => runPurge('shortVisits')}
+                  className="rounded bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-500"
+                >
+                  Purger uniquement les visites courtes
+                </button>
+              </div>
+            </div>
             <div className="rounded-lg border-2 border-amber-500/50 bg-amber-900/20 p-4">
               <p className="text-sm font-bold text-amber-200">Bots : exclure ou purger</p>
               <p className="mt-1 text-xs text-white/70">Exclure en masse = ajouter les hash des sessions bots au filtre (ils disparaissent des stats). Purger = supprimer définitivement ces sessions de la base.</p>
