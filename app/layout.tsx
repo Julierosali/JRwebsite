@@ -48,6 +48,9 @@ export async function generateMetadata(): Promise<Metadata> {
       template: '%s | Julie Rosali',
     },
     description: shortDesc,
+    verification: {
+      google: 'TnBC2oaICiHBGgpTXL2r8P_LtA5JW9Q6zHcG9ZqaIQ8',
+    },
   };
 }
 
