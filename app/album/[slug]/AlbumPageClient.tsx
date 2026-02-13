@@ -190,7 +190,7 @@ export default function AlbumPageClient() {
             {albumPage.label && (
               <p>
                 <span className="mr-2">🏷</span>
-                Label : {albumPage.label}
+                {locale === 'es' ? 'Sello' : 'Label'} : {albumPage.label}
               </p>
             )}
             {albumPage.producer && <p>{locale === 'es' ? 'Productor' : 'Producteur'} : {albumPage.producer}</p>}

@@ -84,7 +84,19 @@ export function EditAlbumPageModal({ section, onClose, onSave }: EditAlbumPageMo
         const otherAp = otherBlock.albumPage as Record<string, unknown>;
         for (const sk of ALBUM_PAGE_SHARED_KEYS) {
           if ((value as Record<string, unknown>)[sk] !== undefined) {
-            otherAp[sk] = (value as Record<string, unknown>)[sk];
+            // Boutons : ne synchroniser que les URLs, pas les libellés
+            if (sk === 'buttons') {
+              const srcButtons = (value as Record<string, unknown>).buttons as { label: string; url: string }[] | undefined;
+              const dstButtons = (otherAp.buttons as { label: string; url: string }[]) ?? [];
+              if (srcButtons) {
+                otherAp.buttons = srcButtons.map((btn, i) => ({
+                  label: dstButtons[i]?.label ?? btn.label,
+                  url: btn.url,
+                }));
+              }
+            } else {
+              otherAp[sk] = (value as Record<string, unknown>)[sk];
+            }
           }
         }
       }
@@ -127,22 +139,28 @@ export function EditAlbumPageModal({ section, onClose, onSave }: EditAlbumPageMo
           </button>
         </div>
         <p className="mt-3 text-sm text-white/70">
-          Date de sortie, artiste, lecteurs, vidéo, boutons sous la pochette.
+          {editLocale === 'es'
+            ? 'Fecha de lanzamiento, artista, reproductores, vídeo, botones bajo la portada.'
+            : 'Date de sortie, artiste, lecteurs, vidéo, boutons sous la pochette.'}
         </p>
 
         <div className="mt-6 space-y-4">
           <div>
-            <label className="block text-sm font-medium">Date de sortie</label>
+            <label className="block text-sm font-medium">
+              {editLocale === 'es' ? 'Fecha de lanzamiento' : 'Date de sortie'}
+            </label>
             <input
               type="text"
               value={String(ap.releaseDate ?? '')}
               onChange={(e) => u('albumPage', { ...ap, releaseDate: e.target.value })}
               className="mt-1 w-full rounded border border-white/30 bg-black/30 px-3 py-2 text-white"
-              placeholder="16 septembre 2024"
+              placeholder={editLocale === 'es' ? '16 de septiembre de 2024' : '16 septembre 2024'}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium">Artiste</label>
+            <label className="block text-sm font-medium">
+              {editLocale === 'es' ? 'Artista' : 'Artiste'}
+            </label>
             <input
               type="text"
               value={String(ap.artist ?? '')}
@@ -151,7 +169,9 @@ export function EditAlbumPageModal({ section, onClose, onSave }: EditAlbumPageMo
             />
           </div>
           <div>
-            <label className="block text-sm font-medium">Label</label>
+            <label className="block text-sm font-medium">
+              {editLocale === 'es' ? 'Sello' : 'Label'}
+            </label>
             <input
               type="text"
               value={String(ap.label ?? '')}
@@ -160,7 +180,9 @@ export function EditAlbumPageModal({ section, onClose, onSave }: EditAlbumPageMo
             />
           </div>
           <div>
-            <label className="block text-sm font-medium">URL vidéo YouTube (page album)</label>
+            <label className="block text-sm font-medium">
+              {editLocale === 'es' ? 'Vídeo YouTube (página álbum)' : 'URL vidéo YouTube (page album)'}
+            </label>
             <input
               type="url"
               value={youtubeIdToUrl(String(ap.youtubeEmbedId ?? ''))}
@@ -170,8 +192,14 @@ export function EditAlbumPageModal({ section, onClose, onSave }: EditAlbumPageMo
             />
           </div>
           <div>
-            <label className="block text-sm font-medium">Liens d&apos;écoute (Spotify et/ou SoundCloud)</label>
-            <p className="mt-1 text-xs text-white/70">Un lien par ligne. Le lecteur affiché s&apos;adapte au type de lien.</p>
+            <label className="block text-sm font-medium">
+              {editLocale === 'es' ? 'Enlaces de escucha (Spotify y/o SoundCloud)' : 'Liens d\'écoute (Spotify et/ou SoundCloud)'}
+            </label>
+            <p className="mt-1 text-xs text-white/70">
+              {editLocale === 'es'
+                ? 'Un enlace por línea. El reproductor se adapta al tipo de enlace.'
+                : 'Un lien par ligne. Le lecteur affiché s\'adapte au type de lien.'}
+            </p>
             <textarea
               value={(ap.listenUrls as string) ?? (ap.soundcloudEmbedUrl as string) ?? ''}
               onChange={(e) => u('albumPage', { ...ap, listenUrls: e.target.value })}
@@ -181,7 +209,9 @@ export function EditAlbumPageModal({ section, onClose, onSave }: EditAlbumPageMo
             />
           </div>
           <div className="border-t border-white/20 pt-4">
-            <p className="text-sm font-medium text-white/80">Boutons sous la pochette (libellé + lien)</p>
+            <p className="text-sm font-medium text-white/80">
+              {editLocale === 'es' ? 'Botones bajo la portada (texto + enlace)' : 'Boutons sous la pochette (libellé + lien)'}
+            </p>
             {buttons.map((btn, i) => (
               <div key={i} className="mt-2 flex flex-wrap gap-2 rounded border border-white/20 p-3">
                 <input
@@ -192,7 +222,7 @@ export function EditAlbumPageModal({ section, onClose, onSave }: EditAlbumPageMo
                     next[i] = { ...next[i], label: e.target.value };
                     u('albumPage', { ...ap, buttons: next });
                   }}
-                  placeholder="Libellé"
+                  placeholder={editLocale === 'es' ? 'Texto' : 'Libellé'}
                   className="flex-1 min-w-[120px] rounded border border-white/30 bg-black/30 px-2 py-1.5 text-sm text-white"
                 />
                 <input
@@ -214,7 +244,7 @@ export function EditAlbumPageModal({ section, onClose, onSave }: EditAlbumPageMo
                   }}
                   className="rounded border border-red-400/50 bg-red-900/20 px-2 py-1 text-xs text-red-200 hover:bg-red-900/40"
                 >
-                  Supprimer
+                  {editLocale === 'es' ? 'Eliminar' : 'Supprimer'}
                 </button>
               </div>
             ))}
@@ -223,14 +253,22 @@ export function EditAlbumPageModal({ section, onClose, onSave }: EditAlbumPageMo
               onClick={() => u('albumPage', { ...ap, buttons: [...buttons, { label: '', url: '' }] })}
               className="mt-2 rounded border border-white/40 bg-white/10 px-3 py-2 text-sm font-medium transition hover:bg-white/20"
             >
-              + Ajouter un bouton
+              {editLocale === 'es' ? '+ Añadir un botón' : '+ Ajouter un bouton'}
             </button>
           </div>
           <div className="border-t border-white/20 pt-4">
-            <p className="text-sm font-medium text-white/80">Galerie vidéo</p>
-            <p className="mt-1 text-xs text-white/70">Liens YouTube. Choisissez le nombre de colonnes et l&apos;ordre des vidéos.</p>
+            <p className="text-sm font-medium text-white/80">
+              {editLocale === 'es' ? 'Galería de vídeos' : 'Galerie vidéo'}
+            </p>
+            <p className="mt-1 text-xs text-white/70">
+              {editLocale === 'es'
+                ? 'Enlaces YouTube. Elige el número de columnas y el orden de los vídeos.'
+                : 'Liens YouTube. Choisissez le nombre de colonnes et l\'ordre des vidéos.'}
+            </p>
             <div className="mt-2">
-              <label className="block text-xs text-white/70">Nombre de colonnes</label>
+              <label className="block text-xs text-white/70">
+                {editLocale === 'es' ? 'Número de columnas' : 'Nombre de colonnes'}
+              </label>
               <select
                 value={videoGalleryColumns}
                 onChange={(e) => u('albumPage', { ...ap, videoGalleryColumns: Number(e.target.value) || 2 })}
@@ -238,7 +276,7 @@ export function EditAlbumPageModal({ section, onClose, onSave }: EditAlbumPageMo
               >
                 {[1, 2, 3, 4].map((n) => (
                   <option key={n} value={n}>
-                    {n} colonne{n > 1 ? 's' : ''}
+                    {n} {editLocale === 'es' ? (n > 1 ? 'columnas' : 'columna') : (n > 1 ? 'colonnes' : 'colonne')}
                   </option>
                 ))}
               </select>
@@ -268,7 +306,7 @@ export function EditAlbumPageModal({ section, onClose, onSave }: EditAlbumPageMo
                         u('albumPage', { ...ap, videoGallery: next });
                       }}
                       className="rounded border border-white/30 bg-white/10 px-2 py-1 text-xs disabled:opacity-40"
-                      title="Monter"
+                      title={editLocale === 'es' ? 'Subir' : 'Monter'}
                     >
                       ↑
                     </button>
@@ -282,7 +320,7 @@ export function EditAlbumPageModal({ section, onClose, onSave }: EditAlbumPageMo
                         u('albumPage', { ...ap, videoGallery: next });
                       }}
                       className="rounded border border-white/30 bg-white/10 px-2 py-1 text-xs disabled:opacity-40"
-                      title="Descendre"
+                      title={editLocale === 'es' ? 'Bajar' : 'Descendre'}
                     >
                       ↓
                     </button>
@@ -294,7 +332,7 @@ export function EditAlbumPageModal({ section, onClose, onSave }: EditAlbumPageMo
                       }}
                       className="rounded border border-red-400/50 bg-red-900/20 px-2 py-1 text-xs text-red-200 hover:bg-red-900/40"
                     >
-                      Supprimer
+                      {editLocale === 'es' ? 'Eliminar' : 'Supprimer'}
                     </button>
                   </div>
                 </div>
@@ -304,7 +342,7 @@ export function EditAlbumPageModal({ section, onClose, onSave }: EditAlbumPageMo
                 onClick={() => u('albumPage', { ...ap, videoGallery: [...videoGallery, ''] })}
                 className="rounded border border-white/40 bg-white/10 px-3 py-2 text-sm font-medium transition hover:bg-white/20"
               >
-                + Ajouter une vidéo
+                {editLocale === 'es' ? '+ Añadir un vídeo' : '+ Ajouter une vidéo'}
               </button>
             </div>
           </div>
@@ -316,7 +354,7 @@ export function EditAlbumPageModal({ section, onClose, onSave }: EditAlbumPageMo
             onClick={onClose}
             className="rounded bg-white/20 px-4 py-2 font-medium transition hover:bg-white/30"
           >
-            Annuler
+            {editLocale === 'es' ? 'Cancelar' : 'Annuler'}
           </button>
           <button
             type="button"
@@ -324,7 +362,9 @@ export function EditAlbumPageModal({ section, onClose, onSave }: EditAlbumPageMo
             disabled={saving}
             className="rounded bg-violet px-4 py-2 font-medium transition hover:bg-violet-light disabled:opacity-50"
           >
-            {saving ? 'Enregistrement…' : 'Enregistrer'}
+            {saving
+              ? (editLocale === 'es' ? 'Guardando…' : 'Enregistrement…')
+              : (editLocale === 'es' ? 'Guardar' : 'Enregistrer')}
           </button>
         </div>
       </div>
