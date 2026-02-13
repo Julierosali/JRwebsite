@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { getSpotifyEmbedUrl } from '@/lib/spotify';
 import { SectionWrapper } from '@/components/SectionWrapper';
 import { clampFontSize } from '@/lib/fontSize';
+import type { Locale } from '@/lib/locale';
 
 type PlayerContent = {
   title?: string;
@@ -15,6 +16,7 @@ type PlayerContent = {
 
 export function PlayerSection({
   content,
+  locale = 'fr',
   visible,
   onMoveUp,
   onMoveDown,
@@ -24,6 +26,7 @@ export function PlayerSection({
   canMoveDown,
 }: {
   content: PlayerContent;
+  locale?: Locale;
   visible: boolean;
   onMoveUp: () => void;
   onMoveDown: () => void;
@@ -74,9 +77,13 @@ export function PlayerSection({
           </motion.div>
         ) : (
           <div className="rounded-xl bg-black/40 p-8 text-center shadow-xl">
-            <p className="text-white/80 font-medium" style={textPx != null ? { fontSize: `${textPx}px` } : undefined}>Aucun lecteur configuré</p>
+            <p className="text-white/80 font-medium" style={textPx != null ? { fontSize: `${textPx}px` } : undefined}>
+              {locale === 'es' ? 'Ningún reproductor configurado' : 'Aucun lecteur configuré'}
+            </p>
             <p className="mt-2 text-sm text-white/60" style={textPx != null ? { fontSize: `${textPx}px` } : undefined}>
-              Configurez un lien ou un ID de playlist Spotify dans l&apos;admin (bouton &laquo;&nbsp;Écouter&nbsp;&raquo; ou crayon sur cette section).
+              {locale === 'es'
+                ? 'Configure un enlace o un ID de playlist Spotify en el admin.'
+                : 'Configurez un lien ou un ID de playlist Spotify dans l\'admin (bouton « Écouter » ou crayon sur cette section).'}
             </p>
           </div>
         )}

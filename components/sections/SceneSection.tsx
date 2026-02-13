@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { SectionWrapper } from '@/components/SectionWrapper';
 import { clampFontSize } from '@/lib/fontSize';
+import type { Locale } from '@/lib/locale';
 
 type SceneContent = {
   title?: string;
@@ -19,6 +20,7 @@ type SceneContent = {
 
 export function SceneSection({
   content,
+  locale = 'fr',
   visible,
   onMoveUp,
   onMoveDown,
@@ -28,6 +30,7 @@ export function SceneSection({
   canMoveDown,
 }: {
   content: SceneContent;
+  locale?: Locale;
   visible: boolean;
   onMoveUp: () => void;
   onMoveDown: () => void;
@@ -75,7 +78,7 @@ export function SceneSection({
               transition={{ delay: 0.2 }}
               className="font-title mb-3 inline-block w-fit rounded-full border border-white/50 bg-white/10 px-4 py-1.5 text-xs uppercase tracking-widest text-white/90"
             >
-              Prestations scène
+              {locale === 'es' ? 'Actuaciones en vivo' : 'Prestations scène'}
             </motion.span>
             <h2 className="font-title mb-2 text-3xl font-bold tracking-tight md:text-4xl lg:text-5xl" style={titlePx != null ? { fontSize: `${titlePx}px` } : undefined}>
               {title}

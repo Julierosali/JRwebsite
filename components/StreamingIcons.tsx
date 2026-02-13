@@ -37,12 +37,12 @@ const ICONS: Record<string, { label: string; d: string; viewBox: string }> = {
   },
 };
 
-export function StreamingIcons({ links }: { links: LinkItem[] }) {
+export function StreamingIcons({ links, locale = 'fr' }: { links: LinkItem[]; locale?: 'fr' | 'es' }) {
   const items = links?.filter((item) => item.url) ?? [];
   if (!items.length) return null;
   return (
     <div className="mt-4">
-      <span className="mb-3 block text-sm text-white/80">Écouter sur :</span>
+      <span className="mb-3 block text-sm text-white/80">{locale === 'es' ? 'Escuchar en:' : 'Écouter sur :'}</span>
       <div className="flex flex-wrap items-center gap-3">
         {items.map((item) => {
           const icon = ICONS[item.platform.toLowerCase()];

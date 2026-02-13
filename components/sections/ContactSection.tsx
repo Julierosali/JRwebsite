@@ -6,6 +6,7 @@ import { SectionWrapper } from '@/components/SectionWrapper';
 import { SocialIcons } from '@/components/SocialIcons';
 import { StreamingIcons } from '@/components/StreamingIcons';
 import { clampFontSize } from '@/lib/fontSize';
+import type { Locale } from '@/lib/locale';
 
 type ContactContent = {
   title?: string;
@@ -21,6 +22,7 @@ export function ContactSection({
   content,
   socialContent,
   streamingContent,
+  locale = 'fr',
   visible,
   onMoveUp,
   onMoveDown,
@@ -32,6 +34,7 @@ export function ContactSection({
   content: ContactContent;
   socialContent?: { links?: { platform: string; url: string }[] };
   streamingContent?: { links?: { platform: string; url: string }[] };
+  locale?: Locale;
   visible: boolean;
   onMoveUp: () => void;
   onMoveDown: () => void;
@@ -93,7 +96,7 @@ export function ContactSection({
               <SocialIcons links={socialContent?.links ?? []} />
             </div>
             <div className="mt-6">
-              <StreamingIcons links={streamingContent?.links ?? []} />
+              <StreamingIcons links={streamingContent?.links ?? []} locale={locale} />
             </div>
           </div>
           {imageUrl ? (

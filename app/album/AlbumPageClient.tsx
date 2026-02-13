@@ -11,6 +11,7 @@ import { getYoutubeIdFromUrl } from '@/lib/youtube';
 import { useAdmin } from '@/context/AdminContext';
 import { useLocale } from '@/context/LocaleContext';
 import { getSectionContent } from '@/lib/locale';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 
 const EditAlbumPageModal = dynamic(() => import('@/components/EditAlbumPageModal').then((m) => m.EditAlbumPageModal), { ssr: false });
 const AnalyticsDashboard = dynamic(() => import('@/components/AnalyticsDashboard').then((m) => m.AnalyticsDashboard), { ssr: false });
@@ -89,25 +90,17 @@ export default function AlbumPageClient() {
     <div className="min-h-screen bg-gradient">
       <header className="sticky top-0 z-50 border-b border-white/20 bg-black/40 backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
+          <Link
+            href="/"
+            className="rounded border border-white/40 px-4 py-2 text-sm font-medium transition hover:bg-white/20"
+            data-analytics-id="menu|Accueil"
+          >
+            {locale === 'es' ? 'Inicio' : 'Accueil'}
+          </Link>
           <h1 className="text-2xl font-bold md:text-3xl">{content?.albumTitle ?? 'LIBRE'}</h1>
-          <nav className="flex items-center gap-3">
-            {isAdmin && (
-              <button
-                type="button"
-                onClick={() => setShowAlbumModal(true)}
-                className="rounded bg-violet px-4 py-2 text-sm font-medium transition hover:bg-violet-light"
-              >
-                Modifier l&apos;album
-              </button>
-            )}
-            <Link
-              href="/"
-              className="rounded border border-white/40 px-4 py-2 text-sm font-medium transition hover:bg-white/20"
-              data-analytics-id="menu|Accueil"
-            >
-              Accueil
-            </Link>
-          </nav>
+          <div className="shrink-0">
+            <LanguageSwitcher />
+          </div>
         </div>
       </header>
       {isAdmin && (
@@ -137,6 +130,17 @@ export default function AlbumPageClient() {
       )}
 
       <main className="mx-auto max-w-6xl px-4 py-10 md:grid md:grid-cols-2 md:gap-12 md:py-16">
+        {isAdmin && (
+          <div className="col-span-full mb-6 flex justify-center">
+            <button
+              type="button"
+              onClick={() => setShowAlbumModal(true)}
+              className="rounded bg-violet px-4 py-2 text-sm font-medium transition hover:bg-violet-light"
+            >
+              Modifier l&apos;album
+            </button>
+          </div>
+        )}
         <section className="space-y-6">
           <div className="overflow-hidden rounded-xl bg-black/30 p-4">
             {content?.coverUrl ? (
@@ -159,13 +163,13 @@ export default function AlbumPageClient() {
             {albumPage.releaseDate && (
               <p>
                 <span className="mr-2">📅</span>
-                Date de sortie : {albumPage.releaseDate}
+                {locale === 'es' ? 'Fecha de lanzamiento' : 'Date de sortie'} : {albumPage.releaseDate}
               </p>
             )}
             {albumPage.artist && (
               <p>
                 <span className="mr-2">🎵</span>
-                Artiste : {albumPage.artist}
+                {locale === 'es' ? 'Artista' : 'Artiste'} : {albumPage.artist}
               </p>
             )}
             {albumPage.label && (
@@ -174,7 +178,7 @@ export default function AlbumPageClient() {
                 Label : {albumPage.label}
               </p>
             )}
-            {albumPage.producer && <p>Producer: {albumPage.producer}</p>}
+            {albumPage.producer && <p>{locale === 'es' ? 'Productor' : 'Producteur'} : {albumPage.producer}</p>}
           </div>
           {(albumPage.buttons?.length ?? 0) > 0 && (
             <div className="flex flex-wrap gap-3">
@@ -235,7 +239,7 @@ export default function AlbumPageClient() {
           )}
           {youtubeId && (
             <div className="overflow-hidden rounded-xl bg-black/40 p-4">
-              <h2 className="mb-4 text-lg font-bold">Vidéo</h2>
+              <h2 className="mb-4 text-lg font-bold">{locale === 'es' ? 'Vídeo' : 'Vidéo'}</h2>
               <div className="relative aspect-video">
                 <iframe
                   title="YouTube"
@@ -249,14 +253,16 @@ export default function AlbumPageClient() {
           )}
           {listenLinks.length === 0 && !youtubeId && (
             <p className="rounded-xl bg-black/30 p-6 text-center text-white/60">
-              Configurez les liens d&apos;écoute (Spotify, SoundCloud) et/ou la vidéo YouTube dans l&apos;admin (section Album).
+              {locale === 'es'
+                ? 'Configure los enlaces de escucha (Spotify, SoundCloud) y/o el vídeo de YouTube en el admin (sección Álbum).'
+                : 'Configurez les liens d\'écoute (Spotify, SoundCloud) et/ou la vidéo YouTube dans l\'admin (section Album).'}
             </p>
           )}
         </section>
 
         {videoGallery.filter((url) => getYoutubeIdFromUrl(url)).length > 0 && (
           <section className="mt-12 w-full space-y-6 border-t border-white/20 pt-12 md:col-span-2">
-            <h2 className="text-lg font-bold">Galerie vidéo</h2>
+            <h2 className="text-lg font-bold">{locale === 'es' ? 'Galería de vídeos' : 'Galerie vidéo'}</h2>
             <div
               className="grid gap-4"
               data-gallery="video"

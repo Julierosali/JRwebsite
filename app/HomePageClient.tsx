@@ -186,6 +186,7 @@ export default function HomePageClient() {
                 key={section.id}
                 content={contentResolved as Parameters<typeof AlbumSection>[0]['content']}
                 sectionId={section.id}
+                locale={locale}
                 visible={section.visible}
                 onMoveUp={moveUp}
                 onMoveDown={moveDown}
@@ -216,6 +217,7 @@ export default function HomePageClient() {
               <PlayerSection
                 key={section.id}
                 content={contentResolved as Parameters<typeof PlayerSection>[0]['content']}
+                locale={locale}
                 visible={section.visible}
                 onMoveUp={moveUp}
                 onMoveDown={moveDown}
@@ -231,6 +233,7 @@ export default function HomePageClient() {
               <ClipsSection
                 key={section.id}
                 content={contentResolved as Parameters<typeof ClipsSection>[0]['content']}
+                locale={locale}
                 visible={section.visible}
                 onMoveUp={moveUp}
                 onMoveDown={moveDown}
@@ -246,6 +249,7 @@ export default function HomePageClient() {
               <SceneSection
                 key={section.id}
                 content={contentResolved as Parameters<typeof SceneSection>[0]['content']}
+                locale={locale}
                 visible={section.visible}
                 onMoveUp={moveUp}
                 onMoveDown={moveDown}
@@ -280,6 +284,7 @@ export default function HomePageClient() {
                 content={contentResolved as Parameters<typeof ContactSection>[0]['content']}
                 socialContent={socialResolved}
                 streamingContent={streamingResolved}
+                locale={locale}
                 visible={section.visible}
                 onMoveUp={moveUp}
                 onMoveDown={moveDown}

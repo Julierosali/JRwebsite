@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { SectionWrapper } from '@/components/SectionWrapper';
 import { clampFontSize } from '@/lib/fontSize';
+import type { Locale } from '@/lib/locale';
 
 type AlbumContent = {
   title?: string;
@@ -20,6 +21,7 @@ type AlbumContent = {
 export function AlbumSection({
   content,
   sectionId,
+  locale = 'fr',
   visible,
   onMoveUp,
   onMoveDown,
@@ -30,6 +32,7 @@ export function AlbumSection({
 }: {
   content: AlbumContent;
   sectionId: string;
+  locale?: Locale;
   visible: boolean;
   onMoveUp: () => void;
   onMoveDown: () => void;
@@ -88,7 +91,7 @@ export function AlbumSection({
               <p className="font-title mt-2 text-white/90 whitespace-pre-line" style={textPx != null ? { fontSize: `${textPx}px` } : undefined}>{content?.subtitle ?? '11 titres, deux univers'}</p>
               <p className="mt-4 text-sm text-white/80 line-clamp-3 whitespace-pre-line" style={textPx != null ? { fontSize: `${textPx}px` } : undefined}>{content?.description ?? ''}</p>
               <span className="mt-4 inline-block rounded border border-white/60 px-4 py-2 text-sm font-medium transition hover:bg-white/20">
-                Découvrir l&apos;album →
+                {locale === 'es' ? 'Descubrir el álbum →' : 'Découvrir l\'album →'}
               </span>
             </div>
           </motion.div>

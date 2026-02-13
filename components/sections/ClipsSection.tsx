@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { SectionWrapper } from '@/components/SectionWrapper';
 import { parseVideoUrl } from '@/lib/video';
 import { clampFontSize } from '@/lib/fontSize';
+import type { Locale } from '@/lib/locale';
 
 type VideoItem = { title?: string; youtubeId?: string };
 
@@ -14,7 +15,7 @@ type ClipsContent = {
   textFontSize?: number;
 };
 
-function ClipCard({ video: v, index, textFontSize }: { video: VideoItem; index: number; textFontSize?: number }) {
+function ClipCard({ video: v, index, textFontSize, locale = 'fr' }: { video: VideoItem; index: number; textFontSize?: number; locale?: 'fr' | 'es' }) {
   const raw = v.youtubeId ?? '';
   const parsed = parseVideoUrl(raw);
 
@@ -48,7 +49,7 @@ function ClipCard({ video: v, index, textFontSize }: { video: VideoItem; index: 
         </div>
       ) : (
         <div className="flex aspect-video items-center justify-center bg-white/10 text-white/50">
-          Vidéo à venir
+          {locale === 'es' ? 'Vídeo próximamente' : 'Vidéo à venir'}
         </div>
       )}
       {v.title ? <p className="font-title p-3 text-center font-medium" style={textFontSize != null ? { fontSize: `${textFontSize}px` } : undefined}>{v.title}</p> : null}
@@ -58,6 +59,7 @@ function ClipCard({ video: v, index, textFontSize }: { video: VideoItem; index: 
 
 export function ClipsSection({
   content,
+  locale = 'fr',
   visible,
   onMoveUp,
   onMoveDown,
@@ -67,6 +69,7 @@ export function ClipsSection({
   canMoveDown,
 }: {
   content: ClipsContent;
+  locale?: Locale;
   visible: boolean;
   onMoveUp: () => void;
   onMoveDown: () => void;
@@ -99,7 +102,7 @@ export function ClipsSection({
         ) : null}
         <div className="grid gap-6 md:grid-cols-3">
           {videos.map((v, i) => (
-            <ClipCard key={i} video={v} index={i} textFontSize={textPx ?? undefined} />
+            <ClipCard key={i} video={v} index={i} textFontSize={textPx ?? undefined} locale={locale} />
           ))}
         </div>
       </div>
