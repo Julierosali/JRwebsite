@@ -42,6 +42,8 @@ export function AlbumSection({
   const coverUrl = content?.coverUrl ?? '';
   const titlePx = clampFontSize(content?.titleFontSize);
   const textPx = clampFontSize(content?.textFontSize);
+  // Use /album for default slug, /album/[slug] for custom slugs
+  const albumUrl = slug === 'album' ? '/album' : `/album/${slug}`;
 
   return (
     <SectionWrapper
@@ -59,7 +61,7 @@ export function AlbumSection({
         <h2 className="font-title mb-6 text-center text-3xl font-bold tracking-wide md:text-4xl" style={titlePx != null ? { fontSize: `${titlePx}px` } : undefined}>
           {content?.title ?? 'Nouvel album'}
         </h2>
-        <Link href={`/album/${slug}`} className="block" data-analytics-id={`Accueil|Album - ${content?.albumTitle ?? 'LIBRE'}`}>
+        <Link href={albumUrl} className="block" data-analytics-id={`Accueil|Album - ${content?.albumTitle ?? 'LIBRE'}`}>
           <motion.div
             whileHover={{ scale: 1.02 }}
             transition={{ type: 'spring', stiffness: 300 }}

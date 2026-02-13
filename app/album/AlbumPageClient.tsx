@@ -1,7 +1,6 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useEffect, useState, useMemo } from 'react';
@@ -37,9 +36,6 @@ type AlbumContent = {
 };
 
 export default function AlbumPageClient() {
-  const params = useParams();
-  const router = useRouter();
-  const slug = (params?.slug as string) ?? 'album';
   const { isAdmin } = useAdmin();
   const { locale } = useLocale();
   const [section, setSection] = useState<Section | null>(null);
@@ -77,17 +73,6 @@ export default function AlbumPageClient() {
         <div className="h-12 w-12 animate-spin rounded-full border-4 border-violet border-t-transparent" />
       </div>
     );
-  }
-
-  const pageSlug = content?.pageSlug ?? 'album';
-  // Redirect /album/album to /album to avoid duplicate URLs
-  if (slug === 'album') {
-    router.replace('/album');
-    return null;
-  }
-  if (pageSlug !== slug) {
-    router.replace(`/album/${pageSlug}`);
-    return null;
   }
 
   const youtubeId = albumPage.youtubeEmbedId ?? '';
