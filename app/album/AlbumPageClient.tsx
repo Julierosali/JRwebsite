@@ -264,9 +264,9 @@ export default function AlbumPageClient() {
           <section className="mt-12 w-full space-y-6 border-t border-white/20 pt-12 md:col-span-2">
             <h2 className="text-lg font-bold">{locale === 'es' ? 'Galería de vídeos' : 'Galerie vidéo'}</h2>
             <div
-              className="grid gap-4"
+              className="grid grid-cols-1 gap-4 md:[grid-template-columns:var(--gallery-cols)]"
               data-gallery="video"
-              style={{ gridTemplateColumns: `repeat(${videoGalleryColumns}, minmax(0, 1fr))` }}
+              style={{ '--gallery-cols': `repeat(${videoGalleryColumns}, minmax(0, 1fr))` } as React.CSSProperties}
             >
               {videoGallery
                 .map((url) => getYoutubeIdFromUrl(url))
