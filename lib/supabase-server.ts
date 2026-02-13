@@ -21,13 +21,13 @@ export function createServiceRoleClient(): SupabaseClient | null {
 }
 
 /**
- * Récupère le token Bearer depuis Authorization ou depuis le cookie Supabase.
- * Retourne l'id de l'utilisateur si c'est un admin, sinon null.
+ * Récupère le token Bearer depuis Authorization.
+ * Retourne { adminId } si succès, ou { adminId: null, reason } si échec.
  */
-export async function getAdminIdFromRequest(req: NextRequest): Promise<string | null> {
+export async function getAdminIdFromRequest(req: NextRequest): Promise<{ adminId: string | null; reason?: string }> {
   const authHeader = req.headers.get('authorization');
   const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
-  if (!token) return null;
+  if (!token) return { adminId: null, reason: 'no_token' };
 
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
   const client = createClient(supabaseUrl, anonKey, {
@@ -36,10 +36,13 @@ export async function getAdminIdFromRequest(req: NextRequest): Promise<string | 
   });
 
   const { data: { user }, error } = await client.auth.getUser();
-  if (error || !user) return null;
+  if (error || !user) return { adminId: null, reason: `auth_failed: ${error?.message ?? 'no user'}` };
 
   const service = createServiceRoleClient();
-  if (!service) return null;
-  const { data: admin } = await service.from('admin_users').select('id').eq('id', user.id).maybeSingle();
-  return admin ? user.id : null;
+  if (!service) return { adminId: null, reason: 'service_role_key_missing' };
+
+  const { data: admin, error: adminErr } = await service.from('admin_users').select('id').eq('id', user.id).maybeSingle();
+  if (adminErr) return { adminId: null, reason: `admin_query_error: ${adminErr.message}` };
+  if (!admin) return { adminId: null, reason: 'not_admin' };
+  return { adminId: user.id };
 }

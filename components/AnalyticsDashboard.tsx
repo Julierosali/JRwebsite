@@ -36,14 +36,14 @@ const TABS = [
   { id: 'maintenance', label: 'Maintenance' },
 ] as const;
 
-function fetchWithAuth(url: string, options?: RequestInit) {
-  return supabase.auth.getSession().then(({ data: { session } }) => {
-    const headers: HeadersInit = { ...options?.headers };
-    if (session?.access_token) {
-      (headers as Record<string, string>)['Authorization'] = `Bearer ${session.access_token}`;
-    }
-    return fetch(url, { ...options, headers, credentials: 'same-origin' });
-  });
+async function fetchWithAuth(url: string, options?: RequestInit) {
+  // Rafraîchir la session pour obtenir un token valide
+  const { data: { session } } = await supabase.auth.getSession();
+  const headers: HeadersInit = { ...options?.headers };
+  if (session?.access_token) {
+    (headers as Record<string, string>)['Authorization'] = `Bearer ${session.access_token}`;
+  }
+  return fetch(url, { ...options, headers, credentials: 'same-origin' });
 }
 
 const PERIOD_OPTIONS = [
@@ -91,11 +91,24 @@ export function AnalyticsDashboard({ onClose }: { onClose: () => void }) {
     params.set('page', String(page));
     const res = await fetchWithAuth(`/api/admin/analytics?${params}`);
     if (!res.ok) {
-      const text = await res.text();
-      const errMsg =
-        res.status === 401
-          ? 'Non autorisé. Connectez-vous en admin sur ce site (prod), puis rouvrez Statistiques. En prod, vérifiez aussi que SUPABASE_SERVICE_ROLE_KEY est défini dans Vercel (Settings → Environment Variables).'
-          : text || res.statusText;
+      let errMsg = res.statusText;
+      try {
+        const json = await res.json();
+        if (res.status === 401) {
+          const reason = json.reason || '';
+          const REASON_MESSAGES: Record<string, string> = {
+            no_token: 'Aucun token envoyé. Reconnectez-vous en admin puis rouvrez Statistiques.',
+            service_role_key_missing: 'SUPABASE_SERVICE_ROLE_KEY n\'est pas définie côté serveur. Vérifiez dans Vercel (Settings → Environment Variables) et redéployez.',
+            not_admin: 'Votre compte n\'est pas dans la table admin_users.',
+          };
+          errMsg = REASON_MESSAGES[reason]
+            || (reason.startsWith('auth_failed') ? `Authentification échouée (${reason}). Reconnectez-vous.` : `Non autorisé (${reason}).`);
+        } else {
+          errMsg = json.error || errMsg;
+        }
+      } catch {
+        errMsg = await res.text().catch(() => res.statusText);
+      }
       setError(errMsg);
       setLoading(false);
       return;

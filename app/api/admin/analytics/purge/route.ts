@@ -10,7 +10,7 @@ function hashIp(ip: string): string {
 }
 
 export async function POST(req: NextRequest) {
-  const adminId = await getAdminIdFromRequest(req);
+  const { adminId } = await getAdminIdFromRequest(req);
   const secret = req.headers.get('x-cron-secret') || req.headers.get('authorization');
   const isCron = process.env.CRON_SECRET && secret === `Bearer ${process.env.CRON_SECRET}`;
 

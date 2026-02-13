@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAdminIdFromRequest } from '@/lib/supabase-server';
 
 export async function GET(req: NextRequest) {
-  const adminId = await getAdminIdFromRequest(req);
+  const { adminId, reason } = await getAdminIdFromRequest(req);
   if (!adminId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: 'Unauthorized', reason }, { status: 401 });
   }
   const ip =
     req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||

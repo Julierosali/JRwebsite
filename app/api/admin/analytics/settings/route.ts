@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient, getAdminIdFromRequest } from '@/lib/supabase-server';
 
 export async function POST(req: NextRequest) {
-  const adminId = await getAdminIdFromRequest(req);
+  const { adminId, reason } = await getAdminIdFromRequest(req);
   if (!adminId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: 'Unauthorized', reason }, { status: 401 });
   }
 
   const body = await req.json().catch(() => ({}));

@@ -28,9 +28,9 @@ function getDateRange(period: string, days?: number): { from: string; to: string
 }
 
 export async function GET(req: NextRequest) {
-  const adminId = await getAdminIdFromRequest(req);
+  const { adminId, reason } = await getAdminIdFromRequest(req);
   if (!adminId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: 'Unauthorized', reason }, { status: 401 });
   }
 
   const { searchParams } = new URL(req.url);
