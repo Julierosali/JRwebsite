@@ -19,6 +19,19 @@ type EditSectionModalProps = {
 const SIZE_KEYS = ['titleFontSize', 'textFontSize'];
 const PORTRAIT_SHARED_KEYS = ['images', 'scrollSpeed'];
 
+/** Champs partagés par section (URLs, images, layout) — identiques entre les langues. */
+const SECTION_SHARED_FIELDS: Record<string, string[]> = {
+  header: ['logoUrl', 'focusX', 'focusY', 'overlayColor', 'overlayOpacity'],
+  album: ['coverUrl', 'pageSlug'],
+  presentation: ['imageUrl'],
+  player: ['spotifyEmbedUrl', 'spotifyPlaylistId'],
+  clips: ['videos'],
+  scene: ['imageUrl1', 'imageUrl2'],
+  contact: ['email', 'phone', 'imageUrl'],
+  social: ['links'],
+  streaming: ['links'],
+};
+
 function normalizeBilingual(content: Record<string, unknown>): Record<string, unknown> {
   if (isBilingualContent(content)) {
     const next = { ...content } as Record<string, unknown>;
@@ -84,10 +97,31 @@ export function EditSectionModal({ section, onClose, onSave, title: titleOverrid
     });
   };
 
-  /** Met à jour un champ : titre/texte (tailles) à la racine, le reste dans la locale courante. */
+  /** Met à jour un champ : tailles à la racine, champs partagés dans les 2 langues, textes dans la locale courante. */
   const u = (path: string, value: unknown) => {
     if (path === 'titleFontSize' || path === 'textFontSize') {
       update(path, value);
+      return;
+    }
+    const topKey = path.split('.')[0];
+    const shared = SECTION_SHARED_FIELDS[section.key] ?? [];
+    if (shared.includes(topKey)) {
+      // Écrire dans les 2 langues pour garder le contenu synchronisé
+      setContent((prev) => {
+        const next = JSON.parse(JSON.stringify(prev));
+        for (const loc of ['fr', 'es']) {
+          const fullPath = `${loc}.${path}`;
+          const keys = fullPath.split('.');
+          let cur: Record<string, unknown> = next;
+          for (let i = 0; i < keys.length - 1; i++) {
+            const k = keys[i];
+            if (typeof cur[k] !== 'object' || cur[k] === null) cur[k] = {};
+            cur = cur[k] as Record<string, unknown>;
+          }
+          cur[keys[keys.length - 1]] = value;
+        }
+        return next;
+      });
     } else {
       update(`${editLocale}.${path}`, value);
     }
@@ -96,11 +130,20 @@ export function EditSectionModal({ section, onClose, onSave, title: titleOverrid
     if (path === 'titleFontSize' || path === 'textFontSize') {
       return (content as Record<string, unknown>)[path];
     }
-    const block = (content[editLocale] ?? content) as Record<string, unknown>;
+    const block = (content[editLocale] ?? {}) as Record<string, unknown>;
     const keys = path.split('.');
     let cur: unknown = block;
     for (const k of keys) {
       cur = (cur as Record<string, unknown>)?.[k];
+    }
+    // Fallback vers FR si la valeur est absente dans la locale courante
+    if (cur === undefined && editLocale !== 'fr') {
+      const frBlock = (content.fr ?? {}) as Record<string, unknown>;
+      let frCur: unknown = frBlock;
+      for (const k of keys) {
+        frCur = (frCur as Record<string, unknown>)?.[k];
+      }
+      return frCur;
     }
     return cur;
   };
@@ -148,7 +191,11 @@ export function EditSectionModal({ section, onClose, onSave, title: titleOverrid
 
   const renderFields = () => {
     const key = section.key;
-    const c = (content[editLocale] ?? content) as Record<string, unknown>;
+    // FR comme base, la locale courante par-dessus (shallow merge suffisant car champs top-level)
+    const frBlock = (content.fr ?? {}) as Record<string, unknown>;
+    const c = editLocale === 'fr'
+      ? frBlock
+      : { ...frBlock, ...((content[editLocale] ?? {}) as Record<string, unknown>) };
 
     if (key === 'header') {
       const focusX = typeof c.focusX === 'number' ? c.focusX : 50;

@@ -11,6 +11,16 @@ type EditAlbumPageModalProps = {
   onSave: (id: string, content: Record<string, unknown>) => Promise<void>;
 };
 
+/** Sous-champs de albumPage qui sont des liens / média (identiques dans les 2 langues). */
+const ALBUM_PAGE_SHARED_KEYS = [
+  'youtubeEmbedId',
+  'listenUrls',
+  'soundcloudEmbedUrl',
+  'videoGallery',
+  'videoGalleryColumns',
+  'buttons',
+];
+
 function normalizeBilingual(content: Record<string, unknown>): Record<string, unknown> {
   if (isBilingualContent(content)) return content;
   const flat = { ...content };
@@ -50,9 +60,45 @@ export function EditAlbumPageModal({ section, onClose, onSave }: EditAlbumPageMo
     });
   };
 
-  const u = (path: string, value: unknown) => update(`${editLocale}.${path}`, value);
-  const block = (content[editLocale] ?? content) as Record<string, unknown>;
-  const ap = (block.albumPage as Record<string, unknown>) ?? {};
+  /** Écrit dans la locale courante et synchronise les champs partagés (URLs, vidéos) dans l’autre locale. */
+  const u = (path: string, value: unknown) => {
+    setContent((prev) => {
+      const next = JSON.parse(JSON.stringify(prev));
+      // Écrire dans la locale courante
+      const curPath = `${editLocale}.${path}`;
+      const curKeys = curPath.split('.');
+      let cur: Record<string, unknown> = next;
+      for (let i = 0; i < curKeys.length - 1; i++) {
+        const k = curKeys[i];
+        if (typeof cur[k] !== 'object' || cur[k] === null) cur[k] = {};
+        cur = cur[k] as Record<string, unknown>;
+      }
+      cur[curKeys[curKeys.length - 1]] = value;
+
+      // Synchroniser les champs partagés de albumPage dans l’autre locale
+      if (path === 'albumPage' && typeof value === 'object' && value !== null) {
+        const otherLocale = editLocale === 'fr' ? 'es' : 'fr';
+        if (!next[otherLocale] || typeof next[otherLocale] !== 'object') next[otherLocale] = {};
+        const otherBlock = next[otherLocale] as Record<string, unknown>;
+        if (!otherBlock.albumPage || typeof otherBlock.albumPage !== 'object') otherBlock.albumPage = {};
+        const otherAp = otherBlock.albumPage as Record<string, unknown>;
+        for (const sk of ALBUM_PAGE_SHARED_KEYS) {
+          if ((value as Record<string, unknown>)[sk] !== undefined) {
+            otherAp[sk] = (value as Record<string, unknown>)[sk];
+          }
+        }
+      }
+      return next;
+    });
+  };
+
+  // FR comme base, locale courante par-dessus (merge aussi albumPage)
+  const frBlock = (content.fr ?? {}) as Record<string, unknown>;
+  const localeBlock = (content[editLocale] ?? {}) as Record<string, unknown>;
+  const block = editLocale === 'fr' ? frBlock : { ...frBlock, ...localeBlock };
+  const frAp = (frBlock.albumPage as Record<string, unknown>) ?? {};
+  const localeAp = (localeBlock.albumPage as Record<string, unknown>) ?? {};
+  const ap = editLocale === 'fr' ? frAp : { ...frAp, ...localeAp };
   const buttons = (ap.buttons as { label: string; url: string }[]) ?? [];
   const videoGallery = (ap.videoGallery as string[]) ?? [];
   const videoGalleryColumns = Math.min(4, Math.max(1, (ap.videoGalleryColumns as number) ?? 2));
