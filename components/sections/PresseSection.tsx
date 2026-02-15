@@ -233,7 +233,9 @@ export function PresseSection({
                 <div
                   ref={articlesContainerRef}
                   className={`flex gap-6 scroll-smooth scrollbar-hide ${
-                    articlesScrollSpeed > 0 ? '' : 'overflow-x-auto'
+                    articlesScrollSpeed > 0
+                      ? ''
+                      : `overflow-x-auto ${articles.length <= 2 ? 'justify-center' : ''}`
                   }`}
                   style={{
                     animation: articlesScrollSpeed > 0 ? `presse-articles-scroll ${articlesScrollSpeed}s linear infinite` : 'none',
@@ -369,10 +371,10 @@ export function PresseSection({
             {/* Wrapper avec flèches */}
             <div className="relative flex items-center gap-4 group">
               {/* Flèche gauche */}
-              {(radiosScrollSpeed === 0) && (
+              {radios.length > 1 && (
                 <button
                   onClick={() => scrollContainer(radiosContainerRef, 'left')}
-                  className="absolute left-0 top-1/2 -translate-y-1/2 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 opacity-0 transition hover:bg-white/20 group-hover:opacity-100 group-hover:z-20"
+                  className="absolute left-0 top-1/2 -translate-y-1/2 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 opacity-70 transition hover:bg-white/20 md:opacity-0 md:group-hover:opacity-100 md:group-hover:z-20"
                   aria-label="Radio précédente"
                   data-analytics-id="presse|radios-scroll-gauche"
                 >
@@ -386,9 +388,7 @@ export function PresseSection({
               <div className="relative overflow-hidden w-full">
                 <div
                   ref={radiosContainerRef}
-                  className={`flex gap-4 scroll-smooth scrollbar-hide ${
-                    radiosScrollSpeed > 0 ? '' : 'overflow-x-auto'
-                  }`}
+                  className="flex gap-4 overflow-x-auto scroll-smooth scrollbar-hide"
                   style={{
                     animation: radiosScrollSpeed > 0 ? `presse-radios-scroll ${radiosScrollSpeed}s linear infinite` : 'none',
                     animationPlayState: radiosManualScroll ? 'paused' : 'running',
@@ -494,10 +494,10 @@ export function PresseSection({
               </div>
 
               {/* Flèche droite */}
-              {(radiosScrollSpeed === 0) && (
+              {radios.length > 1 && (
                 <button
                   onClick={() => scrollContainer(radiosContainerRef, 'right')}
-                  className="absolute right-0 top-1/2 -translate-y-1/2 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 opacity-0 transition hover:bg-white/20 group-hover:opacity-100 group-hover:z-20"
+                  className="absolute right-0 top-1/2 -translate-y-1/2 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 opacity-70 transition hover:bg-white/20 md:opacity-0 md:group-hover:opacity-100 md:group-hover:z-20"
                   aria-label="Radio suivante"
                   data-analytics-id="presse|radios-scroll-droite"
                 >
