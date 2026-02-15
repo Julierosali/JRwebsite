@@ -234,7 +234,7 @@ export function PresseSection({
                   ref={articlesContainerRef}
                   className={`flex gap-6 scroll-smooth scrollbar-hide ${
                     articlesScrollSpeed > 0
-                      ? ''
+                      ? 'w-max'
                       : `overflow-x-auto ${articles.length <= 2 ? 'justify-center' : ''}`
                   }`}
                   style={{
@@ -388,7 +388,9 @@ export function PresseSection({
               <div className="relative overflow-hidden w-full">
                 <div
                   ref={radiosContainerRef}
-                  className="flex gap-4 overflow-x-auto scroll-smooth scrollbar-hide"
+                  className={`flex gap-4 scroll-smooth scrollbar-hide ${
+                    radiosScrollSpeed > 0 ? 'w-max' : 'overflow-x-auto'
+                  }`}
                   style={{
                     animation: radiosScrollSpeed > 0 ? `presse-radios-scroll ${radiosScrollSpeed}s linear infinite` : 'none',
                     animationPlayState: radiosManualScroll ? 'paused' : 'running',
