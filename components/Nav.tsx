@@ -9,6 +9,7 @@ const DEFAULT_MENU_ITEMS = [
   { href: '#presentation', label: 'Présentation', key: 'presentation' },
   { href: '#player', label: 'Écouter', key: 'player' },
   { href: '#scene', label: 'Scène', key: 'scene' },
+  { href: '#presse', label: 'Presse', key: 'presse' },
   { href: '#portrait', label: 'Portrait', key: 'portrait' },
   { href: '#contact', label: 'Contact', key: 'contact' },
 ];

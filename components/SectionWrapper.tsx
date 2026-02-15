@@ -41,7 +41,7 @@ export function SectionWrapper({
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: '-50px' }}
       transition={{ duration: 0.5, ease: 'easeOut' }}
-      className={`relative ${className}`}
+      className={`relative ${!visible && isAdmin ? 'border-2 border-dashed border-violet/50 rounded-2xl p-4 bg-black/20' : ''} ${className}`}
     >
       {isAdmin && (
         <div className="absolute -top-2 right-2 z-20 flex items-center gap-1 rounded bg-violet/90 px-2 py-1 text-xs">
@@ -87,7 +87,14 @@ export function SectionWrapper({
           )}
         </div>
       )}
-      {visible ? children : <div className="rounded border-2 border-dashed border-violet/50 bg-black/20 p-4 text-center text-white/60">Section masquée</div>}
+      <div className={visible || !isAdmin ? '' : 'opacity-60'}>
+        {children}
+        {!visible && isAdmin && (
+          <div className="mt-4 rounded-lg border border-violet/50 bg-violet/10 p-3 text-center text-sm text-white/70">
+            📌 Section masquée pour les visiteurs
+          </div>
+        )}
+      </div>
     </motion.section>
   );
 }

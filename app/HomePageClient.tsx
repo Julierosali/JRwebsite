@@ -14,6 +14,7 @@ import { PresentationSection } from '@/components/sections/PresentationSection';
 import { PlayerSection } from '@/components/sections/PlayerSection';
 import { ClipsSection } from '@/components/sections/ClipsSection';
 import { SceneSection } from '@/components/sections/SceneSection';
+import { PresseSection } from '@/components/sections/PresseSection';
 import { PortraitSection } from '@/components/sections/PortraitSection';
 import { ContactSection } from '@/components/sections/ContactSection';
 import { StyleInjector } from '@/components/StyleInjector';
@@ -26,7 +27,7 @@ import { Section } from '@/lib/supabase';
 import { clampFontSize } from '@/lib/fontSize';
 import { getSectionContent } from '@/lib/locale';
 
-const SECTION_KEYS_IN_MENU = ['album', 'presentation', 'player', 'scene', 'portrait', 'contact'];
+const SECTION_KEYS_IN_MENU = ['album', 'presentation', 'player', 'scene', 'presse', 'portrait', 'contact'];
 
 export default function HomePageClient() {
   const { sections, loading, updateSection, moveSection } = useSections();
@@ -249,6 +250,22 @@ export default function HomePageClient() {
               <SceneSection
                 key={section.id}
                 content={contentResolved as Parameters<typeof SceneSection>[0]['content']}
+                locale={locale}
+                visible={section.visible}
+                onMoveUp={moveUp}
+                onMoveDown={moveDown}
+                onToggleVisible={toggleVisible}
+                onEdit={startEdit}
+                canMoveUp={canMoveUp}
+                canMoveDown={canMoveDown}
+              />
+            );
+          }
+          if (section.key === 'presse') {
+            return (
+              <PresseSection
+                key={section.id}
+                content={contentResolved as Parameters<typeof PresseSection>[0]['content']}
                 locale={locale}
                 visible={section.visible}
                 onMoveUp={moveUp}

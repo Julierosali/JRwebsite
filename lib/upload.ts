@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 
 const BUCKET = 'site-images';
+const DOCS_BUCKET = 'site-documents';
 
 function sanitizeFileName(name: string): string {
   return name.replace(/[^a-zA-Z0-9.-]/g, '_').slice(0, 80);
@@ -34,5 +35,30 @@ export async function uploadImage(
   if (error) throw error;
 
   const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
+  return data.publicUrl;
+}
+
+/**
+ * Upload un fichier (PDF, etc.) vers Supabase Storage (bucket site-documents).
+ * Retourne l'URL publique du fichier.
+ */
+export async function uploadFile(
+  file: File,
+  pathPrefix: string
+): Promise<string> {
+  const timestamp = Date.now();
+  const ext = file.name.split('.').pop()?.toLowerCase() || 'pdf';
+  const baseName = sanitizeFileName(file.name.replace(/\.[^.]+$/, ''));
+  const path = `${pathPrefix}/${timestamp}-${baseName}.${ext}`;
+
+  const { error } = await supabase.storage.from(DOCS_BUCKET).upload(path, file, {
+    cacheControl: '31536000',
+    upsert: false,
+    contentType: file.type || 'application/pdf',
+  });
+
+  if (error) throw error;
+
+  const { data } = supabase.storage.from(DOCS_BUCKET).getPublicUrl(path);
   return data.publicUrl;
 }

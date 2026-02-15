@@ -6,6 +6,7 @@ import { parseVideoUrl, toStoredVideoValue, toDisplayUrl } from '@/lib/video';
 import { FONT_SIZE_OPTIONS, clampFontSize } from '@/lib/fontSize';
 import { isBilingualContent, type Locale } from '@/lib/locale';
 import { ImageUploadField } from '@/components/ImageUploadField';
+import { FileUploadField } from '@/components/FileUploadField';
 import { ImageGalleryEdit } from '@/components/ImageGalleryEdit';
 
 type EditSectionModalProps = {
@@ -27,6 +28,7 @@ const SECTION_SHARED_FIELDS: Record<string, string[]> = {
   player: ['spotifyEmbedUrl', 'spotifyPlaylistId'],
   clips: ['videos'],
   scene: ['imageUrl1', 'imageUrl2'],
+  presse: ['imageUrl', 'pressKitUrl', 'articles', 'radios'],
   contact: ['email', 'phone', 'imageUrl'],
   social: ['links'],
   streaming: ['links'],
@@ -537,6 +539,184 @@ export function EditSectionModal({ section, onClose, onSave, title: titleOverrid
             onChange={(imgs) => update('images', imgs)}
             pathPrefix="portrait"
           />
+        </>
+      );
+    }
+
+    if (key === 'presse') {
+      const articles = (c.articles as { title?: string; url?: string; source?: string; imageUrl?: string }[]) ?? [];
+      const radios = (c.radios as { name?: string; url?: string; logoUrl?: string }[]) ?? [];
+      return (
+        <>
+          {renderSizeRow(true, true)}
+          <label className="block text-sm font-medium">Titre</label>
+          <input
+            type="text"
+            value={(c.title as string) ?? ''}
+            onChange={(e) => u('title', e.target.value)}
+            className="mt-1 w-full rounded border border-white/30 bg-black/30 px-3 py-2 text-white"
+          />
+          <label className="mt-4 block text-sm font-medium">Sous-titre</label>
+          <textarea
+            value={(c.subtitle as string) ?? ''}
+            onChange={(e) => u('subtitle', e.target.value)}
+            rows={2}
+            className="mt-1 w-full rounded border border-white/30 bg-black/30 px-3 py-2 text-white"
+          />
+          <label className="mt-4 block text-sm font-medium">Texte de présentation</label>
+          <textarea
+            value={(c.body as string) ?? ''}
+            onChange={(e) => u('body', e.target.value)}
+            rows={5}
+            className="mt-1 w-full rounded border border-white/30 bg-black/30 px-3 py-2 text-white"
+          />
+          <ImageUploadField
+            label="Photo presse (optionnel)"
+            value={(c.imageUrl as string) ?? ''}
+            onChange={(url) => u('imageUrl', url)}
+            pathPrefix="presse"
+          />
+          <FileUploadField
+            label="Dossier de presse (PDF, max 10 Mo)"
+            value={(c.pressKitUrl as string) ?? ''}
+            onChange={(url) => u('pressKitUrl', url)}
+            pathPrefix="presse"
+          />
+          <label className="mt-4 block text-sm font-medium">Texte bouton dossier presse</label>
+          <input
+            type="text"
+            value={(c.pressKitText as string) ?? ''}
+            onChange={(e) => u('pressKitText', e.target.value)}
+            className="mt-1 w-full rounded border border-white/30 bg-black/30 px-3 py-2 text-white"
+            placeholder="Télécharger le dossier de presse"
+          />
+          <label className="mt-4 block text-sm font-medium">Texte du bouton Contact</label>
+          <input
+            type="text"
+            value={(c.ctaText as string) ?? ''}
+            onChange={(e) => u('ctaText', e.target.value)}
+            className="mt-1 w-full rounded border border-white/30 bg-black/30 px-3 py-2 text-white"
+            placeholder="Contacter"
+          />
+
+          {/* ── Articles ── */}
+          <div className="mt-6 border-t border-white/20 pt-4">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium">Articles de presse</p>
+              <button
+                type="button"
+                onClick={() => u('articles', [...articles, { title: '', url: '', source: '', imageUrl: '' }])}
+                className="rounded bg-violet/60 px-3 py-1 text-xs hover:bg-violet"
+              >
+                + Ajouter
+              </button>
+            </div>
+            {articles.map((article, i) => (
+              <div key={i} className="mt-3 rounded border border-white/20 p-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-white/70">Article {i + 1}</span>
+                  <button
+                    type="button"
+                    onClick={() => { const v = [...articles]; v.splice(i, 1); u('articles', v); }}
+                    className="text-xs text-red-400 hover:text-red-300"
+                  >
+                    Supprimer
+                  </button>
+                </div>
+                <label className="mt-2 block text-xs">Titre</label>
+                <input
+                  type="text"
+                  value={article.title ?? ''}
+                  onChange={(e) => { const v = [...articles]; v[i] = { ...v[i], title: e.target.value }; u('articles', v); }}
+                  className="mt-1 w-full rounded border border-white/30 bg-black/30 px-3 py-1.5 text-sm text-white"
+                />
+                <label className="mt-2 block text-xs">Source (ex: Le Figaro)</label>
+                <input
+                  type="text"
+                  value={article.source ?? ''}
+                  onChange={(e) => { const v = [...articles]; v[i] = { ...v[i], source: e.target.value }; u('articles', v); }}
+                  className="mt-1 w-full rounded border border-white/30 bg-black/30 px-3 py-1.5 text-sm text-white"
+                />
+                <label className="mt-2 block text-xs">URL de l&apos;article</label>
+                <input
+                  type="url"
+                  value={article.url ?? ''}
+                  onChange={(e) => { const v = [...articles]; v[i] = { ...v[i], url: e.target.value }; u('articles', v); }}
+                  className="mt-1 w-full rounded border border-white/30 bg-black/30 px-3 py-1.5 text-sm text-white"
+                />
+                <ImageUploadField
+                  label="Image de l'article (optionnel)"
+                  value={article.imageUrl ?? ''}
+                  onChange={(url) => { const v = [...articles]; v[i] = { ...v[i], imageUrl: url }; u('articles', v); }}
+                  pathPrefix="presse-articles"
+                />
+              </div>
+            ))}
+          </div>
+
+          {/* ── Radios ── */}
+          <div className="mt-6 border-t border-white/20 pt-4">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium">Radios</p>
+              <button
+                type="button"
+                onClick={() => u('radios', [...radios, { name: '', url: '', logoUrl: '' }])}
+                className="rounded bg-violet/60 px-3 py-1 text-xs hover:bg-violet"
+              >
+                + Ajouter
+              </button>
+            </div>
+            {radios.map((radio, i) => (
+              <div key={i} className="mt-3 rounded border border-white/20 p-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-white/70">Radio {i + 1}</span>
+                  <button
+                    type="button"
+                    onClick={() => { const v = [...radios]; v.splice(i, 1); u('radios', v); }}
+                    className="text-xs text-red-400 hover:text-red-300"
+                  >
+                    Supprimer
+                  </button>
+                </div>
+                <label className="mt-2 block text-xs">Nom</label>
+                <input
+                  type="text"
+                  value={radio.name ?? ''}
+                  onChange={(e) => { const v = [...radios]; v[i] = { ...v[i], name: e.target.value }; u('radios', v); }}
+                  className="mt-1 w-full rounded border border-white/30 bg-black/30 px-3 py-1.5 text-sm text-white"
+                />
+                <label className="mt-2 block text-xs">URL (page web ou flux)</label>
+                <input
+                  type="url"
+                  value={radio.url ?? ''}
+                  onChange={async (e) => {
+                    const url = e.target.value;
+                    const v = [...radios]; v[i] = { ...v[i], url }; u('radios', v);
+                    // Auto-fetch favicon si pas de logo et URL valide
+                    if (url && !radio.logoUrl) {
+                      try {
+                        const res = await fetch(`/api/favicon?url=${encodeURIComponent(url)}`);
+                        if (res.ok) {
+                          const data = await res.json();
+                          if (data.faviconUrl) {
+                            const v2 = [...radios]; v2[i] = { ...v2[i], url, logoUrl: data.faviconUrl }; u('radios', v2);
+                          }
+                        }
+                      } catch { /* ignore */ }
+                    }
+                  }}
+                  className="mt-1 w-full rounded border border-white/30 bg-black/30 px-3 py-1.5 text-sm text-white"
+                />
+                <ImageUploadField
+                  label="Logo radio (optionnel — récupéré auto si URL renseignée)"
+                  value={radio.logoUrl ?? ''}
+                  onChange={(url) => { const v = [...radios]; v[i] = { ...v[i], logoUrl: url }; u('radios', v); }}
+                  pathPrefix="presse-radios"
+                  maxSizeBytes={50 * 1024}
+                />
+              </div>
+            ))}
+          </div>
         </>
       );
     }

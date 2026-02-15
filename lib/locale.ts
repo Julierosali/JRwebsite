@@ -69,6 +69,7 @@ const TRANSLATABLE_FIELDS = new Set([
   'text',
   'albumTitle',
   'ctaText',
+  'pressKitText',
 ]);
 
 /** Sous-champs de albumPage qui sont du texte traduisible. */

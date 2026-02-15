@@ -58,7 +58,7 @@ export function useSections() {
     return e;
   }, [fetch]);
 
-  const reorderableKeys = ['album', 'presentation', 'player', 'clips', 'scene', 'portrait', 'contact'];
+  const reorderableKeys = ['album', 'presentation', 'player', 'clips', 'scene', 'presse', 'portrait', 'contact'];
 
   const moveSection = useCallback(async (index: number, direction: 'up' | 'down') => {
     const filtered = sections.filter((s) => reorderableKeys.includes(s.key));
