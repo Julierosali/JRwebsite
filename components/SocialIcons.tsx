@@ -40,6 +40,7 @@ export function SocialIcons({ links }: { links: LinkItem[] }) {
             rel="noopener noreferrer"
             className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/20 transition hover:bg-violet-light"
             aria-label={icon.label}
+            data-analytics-id={`social|${icon.label}`}
           >
             <svg viewBox={icon.viewBox} className="h-5 w-5 fill-current" aria-hidden>
               <path d={icon.d} />

@@ -55,6 +55,7 @@ export function StreamingIcons({ links, locale = 'fr' }: { links: LinkItem[]; lo
               rel="noopener noreferrer"
               className="flex h-14 w-14 items-center justify-center rounded-xl bg-white/20 transition hover:bg-violet/60 md:h-16 md:w-16"
               aria-label={label}
+              data-analytics-id={`streaming|${label}`}
             >
               {item.imageUrl ? (
                 <span className="relative h-10 w-10 md:h-12 md:w-12">

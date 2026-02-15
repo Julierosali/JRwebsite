@@ -86,7 +86,7 @@ export function ContactSection({
               {phone ? (
                 <p>
                   <span className="mr-2">📞</span>
-                  <a href={`tel:${phone.replace(/\s/g, '')}`} className="underline hover:no-underline">
+                  <a href={`tel:${phone.replace(/\s/g, '')}`} className="underline hover:no-underline" data-analytics-id="contact|telephone">
                     {phone}
                   </a>
                 </p>

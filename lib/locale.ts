@@ -55,6 +55,8 @@ const SHARED_KEYS = [
   'overlayOpacity',
   'images',
   'scrollSpeed',
+  'articlesScrollSpeed',
+  'radiosScrollSpeed',
 ];
 
 /**

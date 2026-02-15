@@ -96,6 +96,7 @@ export function SceneSection({
               <Link
                 href="#contact"
                 className="font-title inline-flex w-fit items-center gap-2 rounded-full border-2 border-white/90 bg-white/15 px-6 py-3 text-base font-medium transition hover:bg-white/30 hover:border-white hover:scale-[1.02]"
+                data-analytics-id="scene|reserver-prestation"
               >
                 {ctaText}
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>

@@ -29,6 +29,13 @@ body {
   .text-balance {
     text-wrap: balance;
   }
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 /* Scroll smooth pour ancres */
@@ -48,6 +55,25 @@ html {
   }
   100% {
     transform: translate3d(-50%, 0, 0);
+  }
+}
+
+/* Articles & Radios : défilement horizontal infini */
+@keyframes presse-articles-scroll {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-66.666%, 0, 0);
+  }
+}
+
+@keyframes presse-radios-scroll {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-66.666%, 0, 0);
   }
 }
 

@@ -189,6 +189,7 @@ export default function AlbumPageClient() {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="rounded border border-white/40 px-4 py-2 text-sm transition hover:bg-white/20"
+                  data-analytics-id={`album|bouton-${btn.label}`}
                 >
                   {btn.label}
                 </a>

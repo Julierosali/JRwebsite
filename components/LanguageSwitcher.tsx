@@ -15,6 +15,7 @@ export function LanguageSwitcher() {
           onClick={() => setLocale(value as Locale)}
           title={label}
           aria-label={label}
+          data-analytics-id={`langue|${value}`}
           className={`rounded px-2 py-1 text-lg transition hover:bg-white/20 ${
             locale === value ? 'bg-violet/80 ring-1 ring-white/40' : 'opacity-80 hover:opacity-100'
           }`}

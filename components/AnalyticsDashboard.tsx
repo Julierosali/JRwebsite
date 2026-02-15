@@ -31,7 +31,6 @@ const TABS = [
   { id: 'countrycity', label: 'Pays / Ville' },
   { id: 'clicks', label: 'Éléments les plus cliqués' },
   { id: 'source', label: 'Source (navigateur)' },
-  { id: 'visits', label: 'Visites par page' },
   { id: 'visitors', label: 'Visiteurs' },
   { id: 'maintenance', label: 'Maintenance' },
 ] as const;
@@ -558,26 +557,6 @@ export function AnalyticsDashboard({ onClose }: { onClose: () => void }) {
                       <td className="py-1.5">{r.referrer || 'direct'}</td>
                       <td className="py-1.5">{r.browser}</td>
                       <td className="py-1.5">{r.count}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-            {tab === 'visits' && (
-              <table className="w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b border-white/20">
-                    <th className="py-2">Page</th>
-                    <th className="py-2">Visites</th>
-                    <th className="py-2">Temps moy.</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.visitsByPage.map((r) => (
-                    <tr key={r.path} className="border-b border-white/10">
-                      <td className="py-1.5">{pathLabel(r.path)}</td>
-                      <td className="py-1.5">{r.count}</td>
-                      <td className="py-1.5">{r.avgDuration > 0 ? `${r.avgDuration}s` : '—'}</td>
                     </tr>
                   ))}
                 </tbody>

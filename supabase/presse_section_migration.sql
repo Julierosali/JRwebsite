@@ -16,6 +16,11 @@ VALUES (
 ON CONFLICT (id) DO NOTHING;
 
 -- Politiques storage pour site-documents
+DROP POLICY IF EXISTS "site_documents_public_read" ON storage.objects;
+DROP POLICY IF EXISTS "site_documents_authenticated_upload" ON storage.objects;
+DROP POLICY IF EXISTS "site_documents_authenticated_update" ON storage.objects;
+DROP POLICY IF EXISTS "site_documents_authenticated_delete" ON storage.objects;
+
 CREATE POLICY "site_documents_public_read"
   ON storage.objects FOR SELECT
   USING (bucket_id = 'site-documents');
@@ -73,7 +78,9 @@ BEGIN
         "body": "Artículos de prensa, portadas, emisiones de radio… Julie Rosali hace vibrar las ondas y las páginas. Descubra sus apariciones mediáticas y descargue el dossier de prensa.",
         "ctaText": "Contactar",
         "pressKitText": "Descargar el dossier de prensa"
-      }
+      },
+      "articlesScrollSpeed": 40,
+      "radiosScrollSpeed": 40
     }'::jsonb
   )
   ON CONFLICT (key) DO NOTHING;

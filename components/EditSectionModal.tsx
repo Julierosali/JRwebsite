@@ -19,6 +19,8 @@ type EditSectionModalProps = {
 
 const SIZE_KEYS = ['titleFontSize', 'textFontSize'];
 const PORTRAIT_SHARED_KEYS = ['images', 'scrollSpeed'];
+const PRESSE_ROOT_KEYS = ['articlesScrollSpeed', 'radiosScrollSpeed'];
+const ALL_ROOT_KEYS = [...SIZE_KEYS, ...PORTRAIT_SHARED_KEYS, ...PRESSE_ROOT_KEYS];
 
 /** Champs partagés par section (URLs, images, layout) — identiques entre les langues. */
 const SECTION_SHARED_FIELDS: Record<string, string[]> = {
@@ -39,27 +41,24 @@ function normalizeBilingual(content: Record<string, unknown>): Record<string, un
     const next = { ...content } as Record<string, unknown>;
     const fr = next.fr as Record<string, unknown> | undefined;
     const es = next.es as Record<string, unknown> | undefined;
-    SIZE_KEYS.forEach((k) => {
-      if (next[k] === undefined && fr?.[k] !== undefined) next[k] = fr[k];
-    });
-    PORTRAIT_SHARED_KEYS.forEach((k) => {
+    ALL_ROOT_KEYS.forEach((k) => {
       if (next[k] === undefined && fr?.[k] !== undefined) next[k] = fr[k];
     });
     if (fr) {
       const frCopy = { ...fr };
-      [...SIZE_KEYS, ...PORTRAIT_SHARED_KEYS].forEach((k) => delete frCopy[k]);
+      ALL_ROOT_KEYS.forEach((k) => delete frCopy[k]);
       next.fr = frCopy;
     }
     if (es) {
       const esCopy = { ...es };
-      [...SIZE_KEYS, ...PORTRAIT_SHARED_KEYS].forEach((k) => delete esCopy[k]);
+      ALL_ROOT_KEYS.forEach((k) => delete esCopy[k]);
       next.es = esCopy;
     }
     return next;
   }
   const flat = { ...content };
   const rootSizes: Record<string, unknown> = {};
-  [...SIZE_KEYS, ...PORTRAIT_SHARED_KEYS].forEach((k) => {
+  ALL_ROOT_KEYS.forEach((k) => {
     if (flat[k] !== undefined) rootSizes[k] = flat[k];
     delete flat[k];
   });
@@ -101,7 +100,7 @@ export function EditSectionModal({ section, onClose, onSave, title: titleOverrid
 
   /** Met à jour un champ : tailles à la racine, champs partagés dans les 2 langues, textes dans la locale courante. */
   const u = (path: string, value: unknown) => {
-    if (path === 'titleFontSize' || path === 'textFontSize') {
+    if (path === 'titleFontSize' || path === 'textFontSize' || path === 'articlesScrollSpeed' || path === 'radiosScrollSpeed') {
       update(path, value);
       return;
     }
@@ -546,6 +545,12 @@ export function EditSectionModal({ section, onClose, onSave, title: titleOverrid
     if (key === 'presse') {
       const articles = (c.articles as { title?: string; url?: string; source?: string; imageUrl?: string }[]) ?? [];
       const radios = (c.radios as { name?: string; url?: string; logoUrl?: string }[]) ?? [];
+      const articlesScrollSpeed = typeof (content as Record<string, unknown>).articlesScrollSpeed === 'number'
+        ? (content as Record<string, unknown>).articlesScrollSpeed as number
+        : 40;
+      const radiosScrollSpeed = typeof (content as Record<string, unknown>).radiosScrollSpeed === 'number'
+        ? (content as Record<string, unknown>).radiosScrollSpeed as number
+        : 40;
       return (
         <>
           {renderSizeRow(true, true)}
@@ -598,6 +603,28 @@ export function EditSectionModal({ section, onClose, onSave, title: titleOverrid
             className="mt-1 w-full rounded border border-white/30 bg-black/30 px-3 py-2 text-white"
             placeholder="Contacter"
           />
+
+          <label className="mt-4 block text-sm font-medium">Vitesse défilement articles (secondes)</label>
+          <input
+            type="number"
+            min={0}
+            max={120}
+            value={articlesScrollSpeed}
+            onChange={(e) => u('articlesScrollSpeed', Number(e.target.value) ?? 0)}
+            className="mt-1 w-full rounded border border-white/30 bg-black/30 px-3 py-2 text-white"
+          />
+          <p className="mt-1 text-xs text-white/60">0 = pas de défilement auto (navigation manuelle). 1–120 secondes pour la boucle.</p>
+
+          <label className="mt-4 block text-sm font-medium">Vitesse défilement radios (secondes)</label>
+          <input
+            type="number"
+            min={0}
+            max={120}
+            value={radiosScrollSpeed}
+            onChange={(e) => u('radiosScrollSpeed', Number(e.target.value) ?? 0)}
+            className="mt-1 w-full rounded border border-white/30 bg-black/30 px-3 py-2 text-white"
+          />
+          <p className="mt-1 text-xs text-white/60">0 = pas de défilement auto (navigation manuelle). 1–120 secondes pour la boucle.</p>
 
           {/* ── Articles ── */}
           <div className="mt-6 border-t border-white/20 pt-4">
