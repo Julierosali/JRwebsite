@@ -79,23 +79,45 @@ export function PresseSection({
   const [articlesManualScroll, setArticlesManualScroll] = useState(false);
   const [radiosManualScroll, setRadiosManualScroll] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [isTouchDevice, setIsTouchDevice] = useState(false);
 
   useEffect(() => {
-    const mq = window.matchMedia('(max-width: 768px)');
-    const onChange = (event: MediaQueryListEvent) => setIsMobile(event.matches);
-    setIsMobile(mq.matches);
+    const mobileMq = window.matchMedia('(max-width: 768px)');
+    const touchMq = window.matchMedia('(hover: none), (pointer: coarse)');
 
-    if (typeof mq.addEventListener === 'function') {
-      mq.addEventListener('change', onChange);
-      return () => mq.removeEventListener('change', onChange);
+    const updateFlags = () => {
+      const touchSupport =
+        ('ontouchstart' in window) ||
+        (typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0);
+      setIsMobile(mobileMq.matches);
+      setIsTouchDevice(touchMq.matches || touchSupport);
+    };
+
+    updateFlags();
+
+    if (typeof mobileMq.addEventListener === 'function' && typeof touchMq.addEventListener === 'function') {
+      mobileMq.addEventListener('change', updateFlags);
+      touchMq.addEventListener('change', updateFlags);
+      return () => {
+        mobileMq.removeEventListener('change', updateFlags);
+        touchMq.removeEventListener('change', updateFlags);
+      };
     }
 
-    mq.addListener(onChange);
-    return () => mq.removeListener(onChange);
+    mobileMq.addListener(updateFlags);
+    touchMq.addListener(updateFlags);
+    return () => {
+      mobileMq.removeListener(updateFlags);
+      touchMq.removeListener(updateFlags);
+    };
   }, []);
 
-  const articlesAutoScroll = articlesScrollSpeed > 0 && !isMobile;
-  const radiosAutoScroll = radiosScrollSpeed > 0 && !isMobile;
+  const disableAutoScroll = isMobile || isTouchDevice;
+  const articlesAutoScroll = articlesScrollSpeed > 0 && !disableAutoScroll;
+  const radiosAutoScroll = false;
+  const articleCardStyle = disableAutoScroll
+    ? ({ width: '84vw', minWidth: '84vw', maxWidth: '84vw' } as const)
+    : ({ width: '28%', minWidth: '300px', maxWidth: '420px' } as const);
 
   // Fonction pour mettre en pause l'animation lors du survol ou clic
   const toggleAnimation = (type: 'articles' | 'radios', pause: boolean) => {
@@ -250,16 +272,16 @@ export function PresseSection({
               {/* Conteneur de scroll */}
               <div className="relative overflow-hidden w-full">
                 <div
+                  key={articlesAutoScroll ? 'articles-auto' : 'articles-manual'}
                   ref={articlesContainerRef}
                   className={`flex gap-6 scroll-smooth scrollbar-hide ${
                     articlesAutoScroll
                       ? 'w-max'
-                      : `overflow-x-auto ${articles.length <= 2 ? 'justify-center' : ''}`
+                      : `overflow-x-auto snap-x snap-mandatory ${articles.length <= 2 ? 'md:justify-center' : ''}`
                   }`}
                   style={{
                     animation: articlesAutoScroll ? `presse-articles-scroll ${articlesScrollSpeed}s linear infinite` : 'none',
                     animationPlayState: articlesManualScroll ? 'paused' : 'running',
-                    touchAction: 'pan-x',
                   }}
                   onMouseEnter={() => setArticlesManualScroll(true)}
                   onMouseLeave={() => setArticlesManualScroll(false)}
@@ -272,8 +294,8 @@ export function PresseSection({
                         target="_blank"
                         rel="noopener noreferrer"
                         data-analytics-id={`presse|article-${article.source || article.title || i}`}
-                        className="group/article relative flex flex-col overflow-hidden rounded-xl border border-white/10 bg-white/5 shadow-lg transition hover:border-white/30 hover:bg-white/10 hover:shadow-xl hover:scale-[1.02] flex-shrink-0"
-                        style={{ width: '28%', minWidth: '300px', maxWidth: '420px' }}
+                        className="group/article snap-start relative flex flex-col overflow-hidden rounded-xl border border-white/10 bg-white/5 shadow-lg transition hover:border-white/30 hover:bg-white/10 hover:shadow-xl hover:scale-[1.02] flex-shrink-0"
+                        style={articleCardStyle}
                       >
                         {article.imageUrl ? (
                           <div className="relative aspect-[16/9] w-full overflow-hidden">
@@ -319,8 +341,8 @@ export function PresseSection({
                         target="_blank"
                         rel="noopener noreferrer"
                         data-analytics-id={`presse|article-${article.source || article.title || i}`}
-                        className="group/article relative flex flex-col overflow-hidden rounded-xl border border-white/10 bg-white/5 shadow-lg transition hover:border-white/30 hover:bg-white/10 hover:shadow-xl hover:scale-[1.02] flex-shrink-0"
-                        style={{ width: '28%', minWidth: '300px', maxWidth: '420px' }}
+                        className="group/article snap-start relative flex flex-col overflow-hidden rounded-xl border border-white/10 bg-white/5 shadow-lg transition hover:border-white/30 hover:bg-white/10 hover:shadow-xl hover:scale-[1.02] flex-shrink-0"
+                        style={articleCardStyle}
                       >
                         {article.imageUrl ? (
                           <div className="relative aspect-[16/9] w-full overflow-hidden">
@@ -409,6 +431,7 @@ export function PresseSection({
               {/* Conteneur de scroll */}
               <div className="relative overflow-hidden w-full">
                 <div
+                  key={radiosAutoScroll ? 'radios-auto' : 'radios-manual'}
                   ref={radiosContainerRef}
                   className={`flex gap-4 scroll-smooth scrollbar-hide ${
                     radiosAutoScroll ? 'w-max' : 'overflow-x-auto'
@@ -416,7 +439,6 @@ export function PresseSection({
                   style={{
                     animation: radiosAutoScroll ? `presse-radios-scroll ${radiosScrollSpeed}s linear infinite` : 'none',
                     animationPlayState: radiosManualScroll ? 'paused' : 'running',
-                    touchAction: 'pan-x',
                   }}
                   onMouseEnter={() => setRadiosManualScroll(true)}
                   onMouseLeave={() => setRadiosManualScroll(false)}
