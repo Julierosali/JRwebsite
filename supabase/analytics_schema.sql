@@ -96,11 +96,11 @@ CREATE POLICY "analytics_events_select"
 -- Insert/Update/Delete : l'API collect utilise SUPABASE_SERVICE_ROLE_KEY (bypass RLS).
 -- Purge depuis le dashboard : l'API admin utilise le JWT admin (lecture via policy ci-dessus).
 
--- site_settings : lecture publique (pour API), écriture par admins
+-- site_settings : lecture et écriture par admins (les API utilisent la clé service_role)
 DROP POLICY IF EXISTS "site_settings_select" ON public.site_settings;
 CREATE POLICY "site_settings_select"
   ON public.site_settings FOR SELECT
-  USING (true);
+  USING (EXISTS (SELECT 1 FROM public.admin_users WHERE id = auth.uid()));
 
 DROP POLICY IF EXISTS "site_settings_insert" ON public.site_settings;
 CREATE POLICY "site_settings_insert"

@@ -4,6 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { SectionWrapper } from '@/components/SectionWrapper';
+import { useAdmin } from '@/context/AdminContext';
 import { clampFontSize } from '@/lib/fontSize';
 import type { Locale } from '@/lib/locale';
 
@@ -47,6 +48,7 @@ export function SceneSection({
   const ctaText = content?.ctaText ?? 'Réserver une prestation';
   const titlePx = clampFontSize(content?.titleFontSize);
   const textPx = clampFontSize(content?.textFontSize);
+  const { isAdmin } = useAdmin();
 
   return (
     <SectionWrapper
@@ -106,7 +108,8 @@ export function SceneSection({
             </motion.div>
           </div>
 
-          {/* 2 images dynamiques */}
+          {/* 2 images dynamiques (emplacements vides visibles uniquement en admin) */}
+          {(imageUrl1 || imageUrl2 || isAdmin) && (
           <div className="relative grid grid-cols-2 gap-2 p-4 md:col-span-6 md:gap-4 md:p-6">
             {imageUrl1 ? (
               <motion.div
@@ -155,6 +158,7 @@ export function SceneSection({
               </div>
             )}
           </div>
+          )}
         </motion.article>
       </div>
     </SectionWrapper>

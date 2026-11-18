@@ -6,6 +6,7 @@
 
 import type { Metadata } from 'next';
 import type { PageSeoSettings } from './seo';
+import { getSiteUrl } from './site-url';
 
 const META_DESC_MAX_LENGTH = 300;
 const SITE_NAME_FALLBACK = 'Julie Rosali';
@@ -23,7 +24,7 @@ export function buildMetadataFromSeo(
 ): Metadata {
   if (!seo) return {};
 
-  const baseUrl = options?.baseUrl ?? (typeof window !== 'undefined' ? '' : process.env.NEXT_PUBLIC_SITE_URL ?? '');
+  const baseUrl = options?.baseUrl ?? getSiteUrl();
   const canonical = options?.canonicalOverride ?? seo.canonical_url ?? undefined;
   const canonicalAbsolute = canonical && baseUrl && !canonical.startsWith('http') ? `${baseUrl.replace(/\/$/, '')}${canonical}` : canonical;
 

@@ -4,7 +4,7 @@ Site vitrine une page pour l'artiste Julie Rosali : présentation, nouvel album,
 
 ## Stack
 
-- **Next.js 14** (App Router)
+- **Next.js 15** (App Router, React 19) — pages rendues côté serveur et régénérées toutes les 60 s (ISR)
 - **Supabase** : base de données, auth, storage
 - **Tailwind CSS** + **Framer Motion**
 - **Déploiement** : Vercel
@@ -26,12 +26,20 @@ Site vitrine une page pour l'artiste Julie Rosali : présentation, nouvel album,
 
 Créer `.env.local` à la racine (ou configurer les variables dans Vercel) :
 
-```env
-NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
-```
+Voir `.env.local.example` pour la liste complète :
 
-**Important :** n’utiliser que l’**URL** et la **clé anon** dans le frontend. Ne jamais mettre la **service role key** dans le code ou dans Vercel (sécurité).
+| Variable | Rôle |
+| --- | --- |
+| `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Accès public Supabase |
+| `SUPABASE_SERVICE_ROLE_KEY` | **Serveur uniquement** (API statistiques). À mettre dans Vercel, jamais dans du code client. |
+| `NEXT_PUBLIC_SITE_URL` | Vraie adresse du site (canonical, sitemap, JSON-LD). Par défaut : domaine de production Vercel. |
+| `ANALYTICS_IP_SALT` | Sel du hash des IP |
+| `CRON_SECRET` | Protège la tâche planifiée (`vercel.json`) qui supprime les statistiques de plus de 3 mois |
+
+### Sécurité Supabase
+
+- Exécuter `supabase/security_hardening_migration.sql` (écriture du stockage réservée aux admins, réglages non lisibles publiquement, suppression des IP en clair).
+- Dans **Authentication > Sign In / Providers**, désactiver **Allow new users to sign up** : les comptes admin se créent à la main.
 
 ### 3. Lancer en local
 

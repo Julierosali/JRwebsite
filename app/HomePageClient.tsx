@@ -29,8 +29,8 @@ import { getSectionContent } from '@/lib/locale';
 
 const SECTION_KEYS_IN_MENU = ['album', 'presentation', 'player', 'scene', 'presse', 'portrait', 'contact'];
 
-export default function HomePageClient() {
-  const { sections, loading, updateSection, moveSection } = useSections();
+export default function HomePageClient({ initialSections }: { initialSections: Section[] }) {
+  const { sections, updateSection, moveSection } = useSections(initialSections);
   const { isAdmin } = useAdmin();
   const { locale } = useLocale();
   const [editingSection, setEditingSection] = useState<Section | null>(null);
@@ -59,14 +59,6 @@ export default function HomePageClient() {
   const handleSaveSection = async (id: string, content: Record<string, unknown>) => {
     await updateSection(id, { content });
   };
-
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="h-12 w-12 animate-spin rounded-full border-4 border-violet border-t-transparent" />
-      </div>
-    );
-  }
 
   const headerSection = sectionsByKey['header'];
   const footerSection = sectionsByKey['footer'];
@@ -315,11 +307,11 @@ export default function HomePageClient() {
           return null;
         })}
 
-      {footerSection?.visible !== false && (() => {
+      {(() => {
         const footerResolved = getSectionContent(footerSection?.content as Record<string, unknown>, locale) as { text?: string; textFontSize?: number };
         return (
           <Footer
-            text={footerResolved?.text}
+            text={footerSection?.visible === false ? '' : footerResolved?.text}
             textFontSize={clampFontSize(footerResolved?.textFontSize)}
           />
         );

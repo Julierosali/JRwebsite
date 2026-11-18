@@ -3,15 +3,16 @@
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useEffect, useState, useMemo } from 'react';
-import { supabase } from '@/lib/supabase';
-import { Section } from '@/lib/supabase';
+import { useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
+import { supabase, Section } from '@/lib/supabase';
 import { getSpotifyEmbedUrl, getListenLinkType } from '@/lib/spotify';
 import { getYoutubeIdFromUrl } from '@/lib/youtube';
 import { useAdmin } from '@/context/AdminContext';
 import { useLocale } from '@/context/LocaleContext';
 import { getSectionContent } from '@/lib/locale';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
+import { Footer } from '@/components/Footer';
 
 const EditAlbumPageModal = dynamic(() => import('@/components/EditAlbumPageModal').then((m) => m.EditAlbumPageModal), { ssr: false });
 const AnalyticsDashboard = dynamic(() => import('@/components/AnalyticsDashboard').then((m) => m.AnalyticsDashboard), { ssr: false });
@@ -36,25 +37,15 @@ type AlbumContent = {
   };
 };
 
-export default function AlbumPageClient() {
+/** Page détail de l'album (/album ou /album/<slug>). Données initiales fournies par le serveur. */
+export function AlbumPageView({ initialSection, footerSection }: { initialSection: Section | null; footerSection?: Section | null }) {
   const { isAdmin } = useAdmin();
   const { locale } = useLocale();
-  const [section, setSection] = useState<Section | null>(null);
-  const [loading, setLoading] = useState(true);
+  const router = useRouter();
+  const [section, setSection] = useState<Section | null>(initialSection);
   const [showAlbumModal, setShowAlbumModal] = useState(false);
   const [showStatsModal, setShowStatsModal] = useState(false);
-
-  useEffect(() => {
-    (async () => {
-      const { data } = await supabase
-        .from('sections')
-        .select('*')
-        .eq('key', 'album')
-        .maybeSingle();
-      setSection((data as Section) ?? null);
-      setLoading(false);
-    })();
-  }, []);
+  const es = locale === 'es';
 
   const content = getSectionContent(section?.content as Record<string, unknown>, locale) as AlbumContent;
   const albumPage = content?.albumPage ?? {};
@@ -68,36 +59,35 @@ export default function AlbumPageClient() {
     [listenUrlsRaw]
   );
 
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="h-12 w-12 animate-spin rounded-full border-4 border-violet border-t-transparent" />
-      </div>
-    );
-  }
-
+  const albumTitle = content?.albumTitle ?? 'LIBRE';
   const youtubeId = albumPage.youtubeEmbedId ?? '';
-  const videoGallery = (albumPage.videoGallery ?? []) as string[];
+  const galleryIds = (albumPage.videoGallery ?? []).map((url) => getYoutubeIdFromUrl(url)).filter(Boolean);
   const videoGalleryColumns = Math.min(4, Math.max(1, albumPage.videoGalleryColumns ?? 2));
 
   const handleSaveAlbum = async (id: string, newContent: Record<string, unknown>) => {
-    await supabase.from('sections').update({ content: newContent }).eq('id', id);
+    const { error } = await supabase.from('sections').update({ content: newContent }).eq('id', id);
+    if (error) {
+      window.alert(`Enregistrement impossible : ${error.message}`);
+      return;
+    }
     setSection((prev) => (prev ? { ...prev, content: newContent } : null));
     setShowAlbumModal(false);
+    // Le slug a pu changer : on rafraîchit les données serveur.
+    router.refresh();
   };
 
   return (
     <div className="min-h-screen bg-gradient">
       <header className="sticky top-0 z-50 border-b border-white/20 bg-black/40 backdrop-blur-md">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-4">
           <Link
             href="/"
             className="rounded border border-white/40 px-4 py-2 text-sm font-medium transition hover:bg-white/20"
             data-analytics-id="menu|Accueil"
           >
-            {locale === 'es' ? 'Inicio' : 'Accueil'}
+            {es ? 'Inicio' : 'Accueil'}
           </Link>
-          <h1 className="text-2xl font-bold md:text-3xl">{content?.albumTitle ?? 'LIBRE'}</h1>
+          <h1 className="truncate text-2xl font-bold md:text-3xl">{albumTitle}</h1>
           <div className="shrink-0">
             <LanguageSwitcher />
           </div>
@@ -105,10 +95,7 @@ export default function AlbumPageClient() {
       </header>
       {isAdmin && (
         <div className="sticky top-[4.5rem] z-40 flex flex-wrap justify-center gap-2 border-b border-white/20 bg-black/40 py-2">
-          <Link
-            href="/admin"
-            className="rounded bg-white/20 px-3 py-2 text-sm font-medium transition hover:bg-white/30"
-          >
+          <Link href="/admin" className="rounded bg-white/20 px-3 py-2 text-sm font-medium transition hover:bg-white/30">
             Admin
           </Link>
           <button
@@ -122,11 +109,7 @@ export default function AlbumPageClient() {
       )}
       {showStatsModal && <AnalyticsDashboard onClose={() => setShowStatsModal(false)} />}
       {showAlbumModal && section && (
-        <EditAlbumPageModal
-          section={section}
-          onClose={() => setShowAlbumModal(false)}
-          onSave={handleSaveAlbum}
-        />
+        <EditAlbumPageModal section={section} onClose={() => setShowAlbumModal(false)} onSave={handleSaveAlbum} />
       )}
 
       <main className="mx-auto max-w-6xl px-4 py-10 md:grid md:grid-cols-2 md:gap-12 md:py-16">
@@ -147,38 +130,42 @@ export default function AlbumPageClient() {
               <div className="relative aspect-square w-full max-w-md">
                 <Image
                   src={content.coverUrl}
-                  alt={content?.albumTitle ?? 'LIBRE'}
+                  alt={es ? `Portada del álbum ${albumTitle}` : `Pochette de l'album ${albumTitle}`}
                   fill
+                  priority
                   className="object-cover"
                   sizes="(max-width: 768px) 100vw, 50vw"
                 />
               </div>
             ) : (
               <div className="flex aspect-square max-w-md items-center justify-center rounded-lg bg-white/10 text-4xl font-bold text-white/60">
-                {content?.albumTitle ?? 'LIBRE'}
+                {albumTitle}
               </div>
             )}
           </div>
+          {content?.description ? (
+            <p className="whitespace-pre-line text-white/90">{content.description}</p>
+          ) : null}
           <div className="space-y-2 text-sm text-white/90">
             {albumPage.releaseDate && (
               <p>
-                <span className="mr-2">📅</span>
-                {locale === 'es' ? 'Fecha de lanzamiento' : 'Date de sortie'} : {albumPage.releaseDate}
+                <span className="mr-2" aria-hidden>📅</span>
+                {es ? 'Fecha de lanzamiento' : 'Date de sortie'} : {albumPage.releaseDate}
               </p>
             )}
             {albumPage.artist && (
               <p>
-                <span className="mr-2">🎵</span>
-                {locale === 'es' ? 'Artista' : 'Artiste'} : {albumPage.artist}
+                <span className="mr-2" aria-hidden>🎵</span>
+                {es ? 'Artista' : 'Artiste'} : {albumPage.artist}
               </p>
             )}
             {albumPage.label && (
               <p>
-                <span className="mr-2">🏷</span>
-                {locale === 'es' ? 'Sello' : 'Label'} : {albumPage.label}
+                <span className="mr-2" aria-hidden>🏷</span>
+                {es ? 'Sello' : 'Label'} : {albumPage.label}
               </p>
             )}
-            {albumPage.producer && <p>{locale === 'es' ? 'Productor' : 'Producteur'} : {albumPage.producer}</p>}
+            {albumPage.producer && <p>{es ? 'Productor' : 'Producteur'} : {albumPage.producer}</p>}
           </div>
           {(albumPage.buttons?.length ?? 0) > 0 && (
             <div className="flex flex-wrap gap-3">
@@ -198,97 +185,98 @@ export default function AlbumPageClient() {
           )}
         </section>
 
-        <section className="space-y-8">
-          {listenLinks.length > 0 && (
-            <div className="space-y-6">
-              {listenLinks.map((url, i) => {
-                const type = getListenLinkType(url);
-                if (type === 'spotify') {
-                  const embedSrc = getSpotifyEmbedUrl(url);
-                  if (!embedSrc) return null;
-                  return (
-                    <div key={i} className="overflow-hidden rounded-xl bg-black/40 p-4">
-                      <iframe
-                        title="Spotify"
-                        src={embedSrc}
-                        width="100%"
-                        height="352"
-                        allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-                        loading="lazy"
-                        className="rounded-lg"
-                      />
-                    </div>
-                  );
-                }
-                if (type === 'soundcloud') {
-                  return (
-                    <div key={i} className="overflow-hidden rounded-xl bg-black/40 p-4">
-                      <iframe
-                        title="SoundCloud"
-                        width="100%"
-                        height="166"
-                        allow="autoplay"
-                        src={`https://w.soundcloud.com/player/?url=${encodeURIComponent(url)}&color=%236b4e9e`}
-                        className="rounded-lg"
-                      />
-                    </div>
-                  );
-                }
-                return null;
-              })}
-            </div>
-          )}
+        <section className="mt-8 space-y-8 md:mt-0">
+          {listenLinks.map((url, i) => {
+            const type = getListenLinkType(url);
+            if (type === 'spotify') {
+              const embedSrc = getSpotifyEmbedUrl(url);
+              if (!embedSrc) return null;
+              return (
+                <div key={i} className="overflow-hidden rounded-xl bg-black/40 p-4">
+                  <iframe
+                    title={`Spotify – ${albumTitle}`}
+                    src={embedSrc}
+                    width="100%"
+                    height="352"
+                    allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                    loading="lazy"
+                    className="rounded-lg"
+                  />
+                </div>
+              );
+            }
+            if (type === 'soundcloud') {
+              return (
+                <div key={i} className="overflow-hidden rounded-xl bg-black/40 p-4">
+                  <iframe
+                    title={`SoundCloud – ${albumTitle}`}
+                    width="100%"
+                    height="166"
+                    allow="autoplay"
+                    loading="lazy"
+                    src={`https://w.soundcloud.com/player/?url=${encodeURIComponent(url)}&color=%236b4e9e`}
+                    className="rounded-lg"
+                  />
+                </div>
+              );
+            }
+            return null;
+          })}
           {youtubeId && (
             <div className="overflow-hidden rounded-xl bg-black/40 p-4">
-              <h2 className="mb-4 text-lg font-bold">{locale === 'es' ? 'Vídeo' : 'Vidéo'}</h2>
+              <h2 className="mb-4 text-lg font-bold">{es ? 'Vídeo' : 'Vidéo'}</h2>
               <div className="relative aspect-video">
                 <iframe
-                  title="YouTube"
+                  title={`YouTube – ${albumTitle}`}
                   src={`https://www.youtube-nocookie.com/embed/${youtubeId}?rel=0`}
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                   allowFullScreen
+                  loading="lazy"
                   className="absolute inset-0 h-full w-full rounded-lg"
                 />
               </div>
             </div>
           )}
-          {listenLinks.length === 0 && !youtubeId && (
+          {isAdmin && listenLinks.length === 0 && !youtubeId && (
             <p className="rounded-xl bg-black/30 p-6 text-center text-white/60">
-              {locale === 'es'
-                ? 'Configure los enlaces de escucha (Spotify, SoundCloud) y/o el vídeo de YouTube en el admin (sección Álbum).'
-                : 'Configurez les liens d\'écoute (Spotify, SoundCloud) et/ou la vidéo YouTube dans l\'admin (section Album).'}
+              Configurez les liens d&apos;écoute (Spotify, SoundCloud) et/ou la vidéo YouTube via « Modifier l&apos;album ».
             </p>
           )}
         </section>
 
-        {videoGallery.filter((url) => getYoutubeIdFromUrl(url)).length > 0 && (
+        {galleryIds.length > 0 && (
           <section className="mt-12 w-full space-y-6 border-t border-white/20 pt-12 md:col-span-2">
-            <h2 className="text-lg font-bold">{locale === 'es' ? 'Galería de vídeos' : 'Galerie vidéo'}</h2>
+            <h2 className="text-lg font-bold">{es ? 'Galería de vídeos' : 'Galerie vidéo'}</h2>
             <div
               className="grid grid-cols-1 gap-4 md:[grid-template-columns:var(--gallery-cols)]"
               data-gallery="video"
               style={{ '--gallery-cols': `repeat(${videoGalleryColumns}, minmax(0, 1fr))` } as React.CSSProperties}
             >
-              {videoGallery
-                .map((url) => getYoutubeIdFromUrl(url))
-                .filter(Boolean)
-                .map((embedId, i) => (
-                  <div key={i} className="overflow-hidden rounded-xl bg-black/40">
-                    <div className="relative aspect-video">
-                      <iframe
-                        title={`Vidéo ${i + 1}`}
-                        src={`https://www.youtube-nocookie.com/embed/${embedId}?rel=0`}
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowFullScreen
-                        className="absolute inset-0 h-full w-full rounded-lg"
-                      />
-                    </div>
+              {galleryIds.map((embedId, i) => (
+                <div key={i} className="overflow-hidden rounded-xl bg-black/40">
+                  <div className="relative aspect-video">
+                    <iframe
+                      title={`${es ? 'Vídeo' : 'Vidéo'} ${i + 1} – ${albumTitle}`}
+                      src={`https://www.youtube-nocookie.com/embed/${embedId}?rel=0`}
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                      loading="lazy"
+                      className="absolute inset-0 h-full w-full rounded-lg"
+                    />
                   </div>
-                ))}
+                </div>
+              ))}
             </div>
           </section>
         )}
       </main>
+      <Footer
+        text={
+          footerSection?.visible === false
+            ? ''
+            : getSectionContent<{ text?: string }>(footerSection?.content as Record<string, unknown>, locale).text
+        }
+      />
     </div>
   );
 }

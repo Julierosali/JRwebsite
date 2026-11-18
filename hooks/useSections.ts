@@ -1,75 +1,60 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useCallback } from 'react';
 import { supabase, Section } from '@/lib/supabase';
 
-const FETCH_TIMEOUT_MS = 6000;
+const REORDERABLE_KEYS = ['album', 'presentation', 'player', 'clips', 'scene', 'presse', 'portrait', 'contact'];
 
-export function useSections() {
-  const [sections, setSections] = useState<Section[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
-  const fetchDoneRef = useRef(false);
+/**
+ * Sections du site. Les données initiales viennent du serveur (SSR/ISR) :
+ * pas de chargement côté navigateur au premier affichage.
+ */
+export function useSections(initialSections: Section[]) {
+  const [sections, setSections] = useState<Section[]>(initialSections);
 
-  const fetch = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    fetchDoneRef.current = false;
-    const timeoutId = window.setTimeout(() => {
-      if (!fetchDoneRef.current) {
-        fetchDoneRef.current = true;
-        setLoading(false);
-      }
-    }, FETCH_TIMEOUT_MS);
-    try {
-      const { data, error: e } = await supabase
-        .from('sections')
-        .select('*')
-        .order('sort_order', { ascending: true });
-      if (!fetchDoneRef.current) {
-        fetchDoneRef.current = true;
-        clearTimeout(timeoutId);
-        if (e) {
-          setError(e as Error);
-          setSections([]);
-        } else {
-          setSections((data as Section[]) ?? []);
-        }
-        setLoading(false);
-      }
-    } catch (err) {
-      if (!fetchDoneRef.current) {
-        fetchDoneRef.current = true;
-        clearTimeout(timeoutId);
-        setError(err instanceof Error ? err : new Error('Erreur de chargement'));
-        setSections([]);
-        setLoading(false);
-      }
-    }
+  const refetch = useCallback(async () => {
+    const { data, error } = await supabase
+      .from('sections')
+      .select('*')
+      .order('sort_order', { ascending: true });
+    if (!error && data) setSections(data as Section[]);
+    return error;
   }, []);
 
-  useEffect(() => {
-    fetch();
-  }, [fetch]);
+  const updateSection = useCallback(
+    async (id: string, updates: Partial<Pick<Section, 'sort_order' | 'visible' | 'content'>>) => {
+      const { error } = await supabase.from('sections').update(updates).eq('id', id);
+      if (error) {
+        window.alert(`Enregistrement impossible : ${error.message}`);
+        return error;
+      }
+      await refetch();
+      return null;
+    },
+    [refetch]
+  );
 
-  const updateSection = useCallback(async (id: string, updates: Partial<Pick<Section, 'sort_order' | 'visible' | 'content'>>) => {
-    const { error: e } = await supabase.from('sections').update(updates).eq('id', id);
-    if (!e) await fetch();
-    return e;
-  }, [fetch]);
+  const moveSection = useCallback(
+    async (index: number, direction: 'up' | 'down') => {
+      const filtered = sections.filter((s) => REORDERABLE_KEYS.includes(s.key));
+      const targetIndex = direction === 'up' ? index - 1 : index + 1;
+      if (targetIndex < 0 || targetIndex >= filtered.length) return;
+      // Renumérote toute la liste pour éviter les sort_order identiques (swap sans effet).
+      const reordered = [...filtered];
+      [reordered[index], reordered[targetIndex]] = [reordered[targetIndex], reordered[index]];
+      const base = Math.min(...filtered.map((s) => s.sort_order));
+      const changes = reordered
+        .map((s, i) => ({ id: s.id, sort_order: base + i, old: s.sort_order }))
+        .filter((c) => c.sort_order !== c.old);
+      const results = await Promise.all(
+        changes.map((c) => supabase.from('sections').update({ sort_order: c.sort_order }).eq('id', c.id))
+      );
+      const failed = results.find((r) => r.error);
+      if (failed?.error) window.alert(`Réorganisation impossible : ${failed.error.message}`);
+      await refetch();
+    },
+    [sections, refetch]
+  );
 
-  const reorderableKeys = ['album', 'presentation', 'player', 'clips', 'scene', 'presse', 'portrait', 'contact'];
-
-  const moveSection = useCallback(async (index: number, direction: 'up' | 'down') => {
-    const filtered = sections.filter((s) => reorderableKeys.includes(s.key));
-    const targetIndex = direction === 'up' ? index - 1 : index + 1;
-    if (targetIndex < 0 || targetIndex >= filtered.length) return;
-    const sectionA = filtered[index];
-    const sectionB = filtered[targetIndex];
-    await supabase.from('sections').update({ sort_order: sectionB.sort_order }).eq('id', sectionA.id);
-    await supabase.from('sections').update({ sort_order: sectionA.sort_order }).eq('id', sectionB.id);
-    await fetch();
-  }, [sections, fetch]);
-
-  return { sections, loading, error, refetch: fetch, updateSection, moveSection };
+  return { sections, refetch, updateSection, moveSection };
 }

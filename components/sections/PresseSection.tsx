@@ -119,15 +119,8 @@ export function PresseSection({
     ? ({ width: '84vw', minWidth: '84vw', maxWidth: '84vw' } as const)
     : ({ width: '28%', minWidth: '300px', maxWidth: '420px' } as const);
 
-  // Fonction pour mettre en pause l'animation lors du survol ou clic
-  const toggleAnimation = (type: 'articles' | 'radios', pause: boolean) => {
-    const container = type === 'articles' ? articlesContainerRef.current : radiosContainerRef.current;
-    if (container) {
-      container.style.animationPlayState = pause ? 'paused' : 'running';
-    }
-  };
 
-  const scrollContainer = (containerRef: React.RefObject<HTMLDivElement>, direction: 'left' | 'right') => {
+  const scrollContainer = (containerRef: React.RefObject<HTMLDivElement | null>, direction: 'left' | 'right') => {
     // Si l'animation est active, on ne peut pas vraiment scroller manuellement de manière fiable
     // car "scrollLeft" ne change pas la position de l'animation CSS transform.
     // Mais si vitesse = 0, le scroll manuel fonctionne via scrollTo.

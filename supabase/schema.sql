@@ -101,19 +101,18 @@ CREATE POLICY "site_images_public_read"
   ON storage.objects FOR SELECT
   USING (bucket_id = 'site-images');
 
--- Politique storage : écriture réservée aux admins (via service role ou auth.uid() dans admin_users)
--- Supabase Storage RLS : on autorise l'upload si l'utilisateur est authentifié (à restreindre en prod aux admins si besoin)
-CREATE POLICY "site_images_authenticated_upload"
+-- Politique storage : écriture réservée aux admins (présents dans admin_users)
+CREATE POLICY "site_images_admin_insert"
   ON storage.objects FOR INSERT
-  WITH CHECK (bucket_id = 'site-images' AND auth.role() = 'authenticated');
+  WITH CHECK (bucket_id = 'site-images' AND EXISTS (SELECT 1 FROM public.admin_users WHERE id = auth.uid()));
 
-CREATE POLICY "site_images_authenticated_update"
+CREATE POLICY "site_images_admin_update"
   ON storage.objects FOR UPDATE
-  USING (bucket_id = 'site-images' AND auth.role() = 'authenticated');
+  USING (bucket_id = 'site-images' AND EXISTS (SELECT 1 FROM public.admin_users WHERE id = auth.uid()));
 
-CREATE POLICY "site_images_authenticated_delete"
+CREATE POLICY "site_images_admin_delete"
   ON storage.objects FOR DELETE
-  USING (bucket_id = 'site-images' AND auth.role() = 'authenticated');
+  USING (bucket_id = 'site-images' AND EXISTS (SELECT 1 FROM public.admin_users WHERE id = auth.uid()));
 
 -- Données initiales des sections (contenu par défaut)
 INSERT INTO public.sections (key, sort_order, visible, content) VALUES

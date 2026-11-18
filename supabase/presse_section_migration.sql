@@ -25,17 +25,18 @@ CREATE POLICY "site_documents_public_read"
   ON storage.objects FOR SELECT
   USING (bucket_id = 'site-documents');
 
+-- Écriture réservée aux admins (présents dans admin_users)
 CREATE POLICY "site_documents_authenticated_upload"
   ON storage.objects FOR INSERT
-  WITH CHECK (bucket_id = 'site-documents' AND auth.role() = 'authenticated');
+  WITH CHECK (bucket_id = 'site-documents' AND EXISTS (SELECT 1 FROM public.admin_users WHERE id = auth.uid()));
 
 CREATE POLICY "site_documents_authenticated_update"
   ON storage.objects FOR UPDATE
-  USING (bucket_id = 'site-documents' AND auth.role() = 'authenticated');
+  USING (bucket_id = 'site-documents' AND EXISTS (SELECT 1 FROM public.admin_users WHERE id = auth.uid()));
 
 CREATE POLICY "site_documents_authenticated_delete"
   ON storage.objects FOR DELETE
-  USING (bucket_id = 'site-documents' AND auth.role() = 'authenticated');
+  USING (bucket_id = 'site-documents' AND EXISTS (SELECT 1 FROM public.admin_users WHERE id = auth.uid()));
 
 -- 2) Déterminer le sort_order : placer "presse" juste après "scene"
 -- On prend le sort_order de "scene" +1, puis on décale portrait et contact si nécessaire.

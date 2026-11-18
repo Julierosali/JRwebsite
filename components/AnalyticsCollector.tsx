@@ -1,42 +1,59 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import { useCallback, useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { useAdmin } from '@/context/AdminContext';
 
 const SESSION_KEY = 'jr_analytics_session';
-const PAGE_START_KEY = 'jr_analytics_page_start';
+const ENDPOINT = '/api/analytics/collect';
 
-function getSessionId(): string {
-  if (typeof window === 'undefined') return '';
-  let s = sessionStorage.getItem(SESSION_KEY);
-  if (!s) {
-    s = crypto.randomUUID();
-    sessionStorage.setItem(SESSION_KEY, s);
-  }
-  return s;
+function uuid(): string {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return crypto.randomUUID();
+  // Repli (contexte non sécurisé)
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+  });
 }
 
-function getUa(): { browser: string; device: string; os: string } {
-  if (typeof navigator === 'undefined') return { browser: '', device: '', os: '' };
-  const ua = navigator.userAgent;
+function getSessionId(): string {
+  try {
+    let s = sessionStorage.getItem(SESSION_KEY);
+    if (!s) {
+      s = uuid();
+      sessionStorage.setItem(SESSION_KEY, s);
+    }
+    return s;
+  } catch {
+    return uuid();
+  }
+}
+
+/** Détection navigateur / OS. L'ordre compte : Edge et Opera contiennent « Chrome », Android contient « Linux », iOS contient « Mac OS X ». */
+export function parseUa(ua: string): { browser: string; device: string; os: string } {
   let browser = 'Other';
-  if (ua.includes('Chrome')) browser = 'Chrome';
-  else if (ua.includes('Firefox')) browser = 'Firefox';
-  else if (ua.includes('Safari') && !ua.includes('Chrome')) browser = 'Safari';
-  else if (ua.includes('Edg')) browser = 'Edge';
-  let device = 'desktop';
-  if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua)) device = 'mobile';
+  if (/Edg(e|A|iOS)?\//.test(ua)) browser = 'Edge';
+  else if (/OPR\/|Opera/.test(ua)) browser = 'Opera';
+  else if (/SamsungBrowser/.test(ua)) browser = 'Samsung Internet';
+  else if (/Firefox\/|FxiOS/.test(ua)) browser = 'Firefox';
+  else if (/Chrome\/|CriOS/.test(ua)) browser = 'Chrome';
+  else if (/Safari\//.test(ua)) browser = 'Safari';
+
   let os = 'Other';
-  if (ua.includes('Win')) os = 'Windows';
-  else if (ua.includes('Mac')) os = 'Mac';
-  else if (ua.includes('Linux')) os = 'Linux';
-  else if (ua.includes('Android')) os = 'Android';
-  else if (ua.includes('iOS') || ua.includes('iPhone')) os = 'iOS';
+  if (/iPhone|iPad|iPod/.test(ua)) os = 'iOS';
+  else if (/Android/.test(ua)) os = 'Android';
+  else if (/Windows/.test(ua)) os = 'Windows';
+  else if (/Mac OS X|Macintosh/.test(ua)) os = 'Mac';
+  else if (/CrOS/.test(ua)) os = 'ChromeOS';
+  else if (/Linux/.test(ua)) os = 'Linux';
+
+  let device = 'desktop';
+  if (/iPad|Tablet/.test(ua) || (/Android/.test(ua) && !/Mobile/.test(ua))) device = 'tablet';
+  else if (/Mobi|iPhone|iPod|Android|BlackBerry|IEMobile|Opera Mini/i.test(ua)) device = 'mobile';
   return { browser, device, os };
 }
 
-function getElementId(el: HTMLElement, path: string): string {
+function getElementId(el: HTMLElement): string {
   const aid = el.getAttribute('data-analytics-id');
   if (aid) return `Clic identifié|${aid.trim()}`;
 
@@ -53,11 +70,12 @@ function getElementId(el: HTMLElement, path: string): string {
       const host = url.hostname.toLowerCase();
       if (host.includes('instagram')) return `${menuPrefix}|Instagram`;
       if (host.includes('facebook')) return `${menuPrefix}|Facebook`;
-      if (host.includes('twitter') || host.includes('x.com')) return `${menuPrefix}|X`;
+      if (host.includes('twitter') || host === 'x.com' || host.endsWith('.x.com')) return `${menuPrefix}|X`;
       if (host.includes('tiktok')) return `${menuPrefix}|TikTok`;
       if (host.includes('youtube')) return `${menuPrefix}|YouTube`;
       if (host.includes('spotify')) return `${menuPrefix}|Spotify`;
       if (host.includes('soundcloud')) return `${menuPrefix}|SoundCloud`;
+      if (host.includes('deezer')) return `${menuPrefix}|Deezer`;
       if (url.origin === window.location.origin) return `${menuPrefix}|lien interne`;
       return `${menuPrefix}|lien externe`;
     } catch {
@@ -77,132 +95,140 @@ function getElementId(el: HTMLElement, path: string): string {
     return alt ? `image|${alt.trim().slice(0, 80)}` : 'image';
   }
 
-  const inGallery = el.closest('[data-gallery="video"]') || el.closest('[data-gallery="photo"]');
-  if (inGallery) {
-    const kind = el.closest('[data-gallery="video"]') ? 'vidéo' : 'photo';
-    return `galerie|${kind}`;
-  }
+  const gallery = el.closest('[data-gallery]');
+  if (gallery) return `galerie|${gallery.getAttribute('data-gallery') === 'video' ? 'vidéo' : 'photo'}`;
 
   return 'autre';
 }
 
-async function send(
-  sessionId: string,
-  eventType: 'pageview' | 'click',
-  path: string,
-  payload: {
-    element_id?: string;
-    duration?: number;
-    referrer?: string;
-    is_authenticated: boolean;
-    device?: string;
-    os?: string;
-    browser?: string;
-  }
-) {
-    try {
-      const res = await fetch('/api/analytics/collect', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          session_id: sessionId,
-          event_type: eventType,
-          path,
-          ...payload,
-        }),
-      });
-      if (!res.ok && typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
-        console.warn('[Analytics] collect API error:', res.status, await res.text());
-      }
-    } catch (err) {
-    if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
-      console.warn('[Analytics] collect failed:', err);
+type Payload = {
+  session_id: string;
+  event_type: 'pageview' | 'click';
+  path: string;
+  event_id?: string;
+  element_id?: string;
+  duration?: number;
+  referrer?: string;
+  browser?: string;
+  device?: string;
+  os?: string;
+};
+
+/** Envoi fiable, y compris à la fermeture de l'onglet (sendBeacon, sinon fetch keepalive). */
+function send(payload: Payload, { beacon = false } = {}) {
+  const body = JSON.stringify(payload);
+  try {
+    if (beacon && typeof navigator !== 'undefined' && navigator.sendBeacon) {
+      if (navigator.sendBeacon(ENDPOINT, new Blob([body], { type: 'application/json' }))) return;
     }
+    fetch(ENDPOINT, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, keepalive: true }).catch(() => {});
+  } catch {
+    // statistiques : ne jamais casser le site
   }
 }
 
+type CurrentPage = { eventId: string; path: string; visibleMs: number; visibleSince: number | null };
+
 export function AnalyticsCollector() {
-  const { user } = useAdmin();
-  const pathname = usePathname();
-  const prevPathRef = useRef<string | null>(null);
-  const pageStartRef = useRef<number>(Date.now());
+  const { user, loading } = useAdmin();
+  const pathname = usePathname() || '/';
+  const pageRef = useRef<CurrentPage | null>(null);
+  const tracking = !loading && !user;
 
-  const sendLeave = useCallback((currentPath: string, durationMs: number) => {
-    const sessionId = getSessionId();
-    if (!sessionId) return;
-    send(sessionId, 'pageview', currentPath, {
-      duration: Math.round(durationMs / 1000),
-      referrer: typeof document !== 'undefined' ? document.referrer || undefined : undefined,
-      is_authenticated: false,
-      ...getUa(),
-    });
-  }, []);
-
-  useEffect(() => {
-    if (user) return;
-
+  // Clôt la page en cours : envoie la durée (temps visible uniquement) sur la même ligne.
+  const flushRef = useRef<(beacon: boolean) => void>(() => {});
+  flushRef.current = (beacon: boolean) => {
+    const page = pageRef.current;
+    if (!page) return;
     const now = Date.now();
-    const prevPath = prevPathRef.current;
-    if (prevPath != null) {
-      const start = typeof window !== 'undefined' ? (parseInt(sessionStorage.getItem(PAGE_START_KEY) || '0', 10) || now) : now;
-      sendLeave(prevPath, now - start);
-    }
+    const total = page.visibleMs + (page.visibleSince != null ? now - page.visibleSince : 0);
+    send(
+      {
+        session_id: getSessionId(),
+        event_type: 'pageview',
+        event_id: page.eventId,
+        path: page.path,
+        duration: Math.round(total / 1000),
+        ...getUaSafe(),
+      },
+      { beacon }
+    );
+  };
 
-    const sessionId = getSessionId();
-    if (typeof sessionStorage !== 'undefined') {
-      sessionStorage.setItem(PAGE_START_KEY, String(now));
-    }
-    prevPathRef.current = pathname || '/';
-
-    send(sessionId, 'pageview', pathname || '/', {
-      referrer: typeof document !== 'undefined' ? document.referrer || undefined : undefined,
-      is_authenticated: false,
-      ...getUa(),
-    });
-  }, [pathname, user, sendLeave]);
-
+  // Nouvelle page vue à chaque changement d'URL.
   useEffect(() => {
-    if (user) return;
+    if (!tracking) return;
+    if (pageRef.current) flushRef.current(false);
+    const eventId = uuid();
+    pageRef.current = {
+      eventId,
+      path: pathname,
+      visibleMs: 0,
+      visibleSince: document.visibilityState === 'visible' ? Date.now() : null,
+    };
+    send({
+      session_id: getSessionId(),
+      event_type: 'pageview',
+      event_id: eventId,
+      path: pathname,
+      referrer: document.referrer || undefined,
+      ...getUaSafe(),
+    });
+  }, [pathname, tracking]);
 
+  // Onglet masqué / fermé : on met à jour la durée ; onglet de retour : on reprend le chrono.
+  useEffect(() => {
+    if (!tracking) return;
     const onVisibility = () => {
+      const page = pageRef.current;
+      if (!page) return;
       if (document.visibilityState === 'hidden') {
-        const start = parseInt(sessionStorage.getItem(PAGE_START_KEY) || '0', 10);
-        if (start) sendLeave(prevPathRef.current || '/', Date.now() - start);
+        if (page.visibleSince != null) {
+          page.visibleMs += Date.now() - page.visibleSince;
+          page.visibleSince = null;
+        }
+        flushRef.current(true);
+      } else if (page.visibleSince == null) {
+        page.visibleSince = Date.now();
       }
     };
-    const onBeforeUnload = () => {
-      const start = parseInt(sessionStorage.getItem(PAGE_START_KEY) || '0', 10);
-      if (start) sendLeave(prevPathRef.current || '/', Date.now() - start);
-    };
-
+    const onPageHide = () => flushRef.current(true);
     document.addEventListener('visibilitychange', onVisibility);
-    window.addEventListener('beforeunload', onBeforeUnload);
+    window.addEventListener('pagehide', onPageHide);
     return () => {
       document.removeEventListener('visibilitychange', onVisibility);
-      window.removeEventListener('beforeunload', onBeforeUnload);
+      window.removeEventListener('pagehide', onPageHide);
     };
-  }, [user, sendLeave]);
+  }, [tracking]);
 
+  // Clics
   useEffect(() => {
-    if (user) return;
-
+    if (!tracking) return;
     const onClick = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      const el = target.closest('a, button, [data-analytics-id], img, [data-gallery]') as HTMLElement | null;
+      const target = e.target as HTMLElement | null;
+      const el = target?.closest('a, button, [data-analytics-id], img, [data-gallery]') as HTMLElement | null;
       if (!el) return;
-      const sessionId = getSessionId();
-      const path = pathname || '/';
-      const elementId = getElementId(el, path);
-      send(sessionId, 'click', path, {
-        element_id: elementId,
-        is_authenticated: false,
-        ...getUa(),
+      send({
+        session_id: getSessionId(),
+        event_type: 'click',
+        path: pathname,
+        element_id: getElementId(el),
+        ...getUaSafe(),
       });
     };
-
     document.addEventListener('click', onClick, true);
     return () => document.removeEventListener('click', onClick, true);
-  }, [pathname, user]);
+  }, [pathname, tracking]);
+
+  // Un admin qui se connecte : on arrête de suivre la page en cours.
+  useEffect(() => {
+    if (user) pageRef.current = null;
+  }, [user]);
 
   return null;
+}
+
+function getUaSafe() {
+  if (typeof navigator === 'undefined') return {};
+  return parseUa(navigator.userAgent);
 }

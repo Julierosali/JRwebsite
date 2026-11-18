@@ -148,8 +148,6 @@ export function EditSectionModal({ section, onClose, onSave, title: titleOverrid
     }
     return cur;
   };
-  const getStr = (path: string) => (get(path) as string) ?? '';
-  const getNum = (path: string) => (get(path) as number) ?? 0;
 
   const renderSizeRow = (showTitle: boolean, showText: boolean) => {
     const titlePx = clampFontSize(get('titleFontSize'));

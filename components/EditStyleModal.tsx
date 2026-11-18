@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { Section } from '@/lib/supabase';
 import {
-  DEFAULT_GRADIENT,
   DEFAULT_ACCENT_COLOR,
   DEFAULT_ACCENT_OPACITY,
   TITLE_FONT_DEFAULT,

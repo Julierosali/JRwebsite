@@ -1,178 +1,123 @@
 import { NextRequest, NextResponse } from 'next/server';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { createServiceRoleClient, getAdminIdFromRequest } from '@/lib/supabase-server';
-import { createHash } from 'crypto';
 import { isLikelyBot } from '@/lib/bot-detection';
+import { hashIp, fetchAll, deleteSessions, isShortVisitSession, chunk } from '@/lib/analytics-server';
 
-const SALT = process.env.ANALYTICS_IP_SALT || 'julie-rosali-analytics-v1';
+/** Durée de conservation des statistiques (annoncée dans la politique de confidentialité). */
+const RETENTION_MONTHS = 3;
 
-function hashIp(ip: string): string {
-  return createHash('sha256').update(SALT + ip.trim()).digest('hex');
+function isCronRequest(req: NextRequest): boolean {
+  const secret = process.env.CRON_SECRET;
+  if (!secret) return false;
+  const header = req.headers.get('authorization') || req.headers.get('x-cron-secret');
+  return header === `Bearer ${secret}`;
+}
+
+async function sessionIdsWhere(
+  supabase: SupabaseClient,
+  apply: (q: ReturnType<ReturnType<SupabaseClient['from']>['select']>) => typeof q
+): Promise<string[]> {
+  const rows = await fetchAll<{ session_id: string }>((from, to) =>
+    apply(supabase.from('analytics_sessions').select('session_id')).order('session_id').range(from, to)
+  );
+  return rows.map((r) => r.session_id);
+}
+
+async function purgeOlderThan(supabase: SupabaseClient, before: Date) {
+  const ids = await sessionIdsWhere(supabase, (q) => q.lt('created_at', before.toISOString()));
+  return deleteSessions(supabase, ids);
+}
+
+function monthsAgo(n: number): Date {
+  const d = new Date();
+  d.setMonth(d.getMonth() - n);
+  return d;
+}
+
+/** Appelé chaque jour par la tâche planifiée Vercel (vercel.json) : supprime les données de plus de 3 mois. */
+export async function GET(req: NextRequest) {
+  if (!isCronRequest(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const supabase = createServiceRoleClient();
+  if (!supabase) return NextResponse.json({ error: 'Analytics not configured' }, { status: 503 });
+  try {
+    const count = await purgeOlderThan(supabase, monthsAgo(RETENTION_MONTHS));
+    return NextResponse.json({ ok: true, purged: `olderThan${RETENTION_MONTHS}months`, count });
+  } catch (e) {
+    return NextResponse.json({ error: e instanceof Error ? e.message : 'error' }, { status: 500 });
+  }
 }
 
 export async function POST(req: NextRequest) {
   const { adminId } = await getAdminIdFromRequest(req);
-  const secret = req.headers.get('x-cron-secret') || req.headers.get('authorization');
-  const isCron = process.env.CRON_SECRET && secret === `Bearer ${process.env.CRON_SECRET}`;
-
-  if (!adminId && !isCron) {
+  if (!adminId && !isCronRequest(req)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const supabase = createServiceRoleClient();
-  if (!supabase) {
-    return NextResponse.json({ error: 'Analytics not configured' }, { status: 503 });
-  }
+  if (!supabase) return NextResponse.json({ error: 'Analytics not configured' }, { status: 503 });
 
   const { searchParams } = new URL(req.url);
-  const all = searchParams.get('all') === '1';
-  const olderThan = searchParams.get('olderThan');
-
-  let body: { ips?: string[]; hashes?: string[] } = {};
+  let body: { ips?: unknown; hashes?: unknown } = {};
   try {
     body = await req.json();
   } catch {
-    // no body
+    // pas de corps
   }
+  const asStrings = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []);
 
-  const botsOnly = searchParams.get('bots') === '1';
-  const shortVisitsOnly = searchParams.get('shortVisits') === '1';
-
-  if (botsOnly) {
-    const { data: sessions } = await supabase
-      .from('analytics_sessions')
-      .select('session_id, user_agent');
-    const botSessionIds = (sessions || [])
-      .filter((s) => isLikelyBot(s.user_agent as string | null))
-      .map((s) => s.session_id);
-    let deleted = 0;
-    const batchSize = 500;
-    for (let i = 0; i < botSessionIds.length; i += batchSize) {
-      const batch = botSessionIds.slice(i, i + batchSize);
-      await supabase.from('analytics_events').delete().in('session_id', batch);
-      const { error } = await supabase.from('analytics_sessions').delete().in('session_id', batch);
-      if (!error) deleted += batch.length;
-    }
-    return NextResponse.json({ ok: true, purged: 'bots', count: deleted });
-  }
-
-  if (shortVisitsOnly) {
-    // Récupérer toutes les sessions avec leurs événements
-    const { data: sessions } = await supabase
-      .from('analytics_sessions')
-      .select('session_id, ip_hash');
-    
-    if (!sessions || sessions.length === 0) {
-      return NextResponse.json({ ok: true, purged: 'shortVisits', count: 0 });
+  try {
+    if (searchParams.get('bots') === '1') {
+      const sessions = await fetchAll<{ session_id: string; user_agent: string | null }>((from, to) =>
+        supabase.from('analytics_sessions').select('session_id, user_agent').order('session_id').range(from, to)
+      );
+      const ids = sessions.filter((s) => isLikelyBot(s.user_agent)).map((s) => s.session_id);
+      return NextResponse.json({ ok: true, purged: 'bots', count: await deleteSessions(supabase, ids) });
     }
 
-    // Récupérer tous les événements avec durée
-    const { data: events } = await supabase
-      .from('analytics_events')
-      .select('session_id, duration');
+    if (searchParams.get('shortVisits') === '1') {
+      type Ev = { session_id: string; event_type: string; duration: number | null };
+      const [sessions, events] = await Promise.all([
+        sessionIdsWhere(supabase, (q) => q),
+        fetchAll<Ev>((from, to) =>
+          supabase.from('analytics_events').select('session_id, event_type, duration').order('id').range(from, to)
+        ),
+      ]);
+      const bySession: Record<string, Ev[]> = {};
+      events.forEach((e) => (bySession[e.session_id] ??= []).push(e));
+      const ids = sessions.filter((sid) => isShortVisitSession(bySession[sid] ?? []));
+      return NextResponse.json({ ok: true, purged: 'shortVisits', count: await deleteSessions(supabase, ids) });
+    }
 
-    const eventsBySession: Record<string, { duration: number | null }[]> = {};
-    (events || []).forEach((e) => {
-      const sid = e.session_id as string;
-      if (!eventsBySession[sid]) eventsBySession[sid] = [];
-      eventsBySession[sid].push({ duration: e.duration as number | null });
-    });
+    if (searchParams.get('all') === '1') {
+      const { error: e1 } = await supabase.from('analytics_events').delete().not('id', 'is', null);
+      if (e1) throw new Error(e1.message);
+      const { error: e2 } = await supabase.from('analytics_sessions').delete().not('session_id', 'is', null);
+      if (e2) throw new Error(e2.message);
+      return NextResponse.json({ ok: true, purged: 'all' });
+    }
 
-    // Identifier les sessions avec uniquement des visites < 1 sec
-    const shortVisitSessionIds: string[] = [];
-    sessions.forEach((s) => {
-      const sid = s.session_id as string;
-      const sessionEvents = eventsBySession[sid] || [];
-      
-      if (sessionEvents.length > 0) {
-        const hasOnlyShortVisits = sessionEvents.every(
-          (e) => e.duration === null || e.duration < 1
-        );
-        if (hasOnlyShortVisits) {
-          shortVisitSessionIds.push(sid);
-        }
+    if (searchParams.get('olderThan') === '1month') {
+      const d = new Date();
+      d.setMonth(d.getMonth() - 1);
+      d.setDate(1);
+      d.setHours(0, 0, 0, 0);
+      return NextResponse.json({ ok: true, purged: 'olderThan1month', count: await purgeOlderThan(supabase, d) });
+    }
+
+    const hashes = [...asStrings(body.hashes), ...asStrings(body.ips).map((ip) => hashIp(ip))];
+    if (hashes.length > 0) {
+      const ids: string[] = [];
+      for (const part of chunk(hashes)) {
+        ids.push(...(await sessionIdsWhere(supabase, (q) => q.in('ip_hash', part))));
       }
-    });
+      const purged = asStrings(body.hashes).length > 0 ? 'hashes' : 'ips';
+      return NextResponse.json({ ok: true, purged, count: await deleteSessions(supabase, ids) });
+    }
 
-    let deleted = 0;
-    const batchSize = 500;
-    for (let i = 0; i < shortVisitSessionIds.length; i += batchSize) {
-      const batch = shortVisitSessionIds.slice(i, i + batchSize);
-      await supabase.from('analytics_events').delete().in('session_id', batch);
-      const { error } = await supabase.from('analytics_sessions').delete().in('session_id', batch);
-      if (!error) deleted += batch.length;
-    }
-    return NextResponse.json({ ok: true, purged: 'shortVisits', count: deleted });
+    const count = await purgeOlderThan(supabase, monthsAgo(RETENTION_MONTHS));
+    return NextResponse.json({ ok: true, purged: `olderThan${RETENTION_MONTHS}months`, count });
+  } catch (e) {
+    return NextResponse.json({ error: e instanceof Error ? e.message : 'error' }, { status: 500 });
   }
-
-  if (all) {
-    const { error: delEvents } = await supabase.from('analytics_events').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-    if (delEvents) {
-      return NextResponse.json({ error: delEvents.message }, { status: 500 });
-    }
-    const { error: delSessions } = await supabase.from('analytics_sessions').delete().neq('session_id', '00000000-0000-0000-0000-0000-000000000000');
-    if (delSessions) {
-      return NextResponse.json({ error: delSessions.message }, { status: 500 });
-    }
-    return NextResponse.json({ ok: true, purged: 'all' });
-  }
-
-  if (olderThan === '1month') {
-    const d = new Date();
-    d.setMonth(d.getMonth() - 1);
-    d.setDate(1);
-    d.setHours(0, 0, 0, 0);
-    const before = d.toISOString();
-    const { data: sessions } = await supabase.from('analytics_sessions').select('session_id').lt('created_at', before);
-    const ids = (sessions || []).map((s) => s.session_id);
-    if (ids.length > 0) {
-      await supabase.from('analytics_events').delete().in('session_id', ids);
-      const { error } = await supabase.from('analytics_sessions').delete().in('session_id', ids);
-      if (error) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
-      }
-    }
-    return NextResponse.json({ ok: true, purged: 'olderThan1month', count: ids.length });
-  }
-
-  if (body.hashes && body.hashes.length > 0) {
-    const hashes = body.hashes as string[];
-    const { data: sessions } = await supabase.from('analytics_sessions').select('session_id').in('ip_hash', hashes);
-    const ids = (sessions || []).map((s) => s.session_id);
-    if (ids.length > 0) {
-      await supabase.from('analytics_events').delete().in('session_id', ids);
-      const { error } = await supabase.from('analytics_sessions').delete().in('session_id', ids);
-      if (error) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
-      }
-    }
-    return NextResponse.json({ ok: true, purged: 'hashes', count: ids.length });
-  }
-
-  if (body.ips && body.ips.length > 0) {
-    const hashes = (body.ips as string[]).map((ip) => hashIp(ip));
-    const { data: sessions } = await supabase.from('analytics_sessions').select('session_id').in('ip_hash', hashes);
-    const ids = (sessions || []).map((s) => s.session_id);
-    if (ids.length > 0) {
-      await supabase.from('analytics_events').delete().in('session_id', ids);
-      const { error } = await supabase.from('analytics_sessions').delete().in('session_id', ids);
-      if (error) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
-      }
-    }
-    return NextResponse.json({ ok: true, purged: 'ips', count: ids.length });
-  }
-
-  const d = new Date();
-  d.setMonth(d.getMonth() - 3);
-  const before = d.toISOString();
-  const { data: sessions } = await supabase.from('analytics_sessions').select('session_id').lt('created_at', before);
-  const ids = (sessions || []).map((s) => s.session_id);
-  if (ids.length > 0) {
-    await supabase.from('analytics_events').delete().in('session_id', ids);
-    const { error } = await supabase.from('analytics_sessions').delete().in('session_id', ids);
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-  }
-  return NextResponse.json({ ok: true, purged: 'olderThan3months', count: ids.length });
 }

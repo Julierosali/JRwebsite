@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import { type Locale, getStoredLocale, setStoredLocale } from '@/lib/locale';
+import { type Locale, DEFAULT_LOCALE, getStoredLocale, setStoredLocale } from '@/lib/locale';
 
 type LocaleContextValue = {
   locale: Locale;
@@ -11,7 +11,8 @@ type LocaleContextValue = {
 const LocaleContext = createContext<LocaleContextValue | null>(null);
 
 export function LocaleProvider({ children }: { children: React.ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>(() => getStoredLocale());
+  // Toujours FR au premier rendu (identique au HTML serveur), puis langue mémorisée.
+  const [locale, setLocaleState] = useState<Locale>(DEFAULT_LOCALE);
 
   const setLocale = useCallback((next: Locale) => {
     setLocaleState(next);
@@ -21,6 +22,10 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     setLocaleState(getStoredLocale());
   }, []);
+
+  useEffect(() => {
+    document.documentElement.lang = locale;
+  }, [locale]);
 
   return (
     <LocaleContext.Provider value={{ locale, setLocale }}>

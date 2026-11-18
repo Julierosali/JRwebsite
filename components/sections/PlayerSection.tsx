@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion';
 import { getSpotifyEmbedUrl } from '@/lib/spotify';
 import { SectionWrapper } from '@/components/SectionWrapper';
+import { useAdmin } from '@/context/AdminContext';
 import { clampFontSize } from '@/lib/fontSize';
 import type { Locale } from '@/lib/locale';
 
@@ -41,6 +42,10 @@ export function PlayerSection({
   const src = getSpotifyEmbedUrl(String(embedUrl || playlistId).trim());
   const titlePx = clampFontSize(content?.titleFontSize);
   const textPx = clampFontSize(content?.textFontSize);
+  const { isAdmin } = useAdmin();
+
+  // Aucun lecteur configuré : rien à montrer aux visiteurs.
+  if (!src && !isAdmin) return null;
 
   return (
     <SectionWrapper

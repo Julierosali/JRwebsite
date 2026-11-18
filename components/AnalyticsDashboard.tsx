@@ -320,7 +320,6 @@ export function AnalyticsDashboard({ onClose }: { onClose: () => void }) {
     }
   };
 
-  const perPage = 20;
   const pathLabel = (p: string) => (p === '/' || p === '') ? 'home' : (p || 'home');
 
   return (

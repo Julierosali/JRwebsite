@@ -1,13 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient, getAdminIdFromRequest } from '@/lib/supabase-server';
-import { createHash } from 'crypto';
 import { isLikelyBot } from '@/lib/bot-detection';
+import { hashIp, fetchAll, fetchEventsForSessions } from '@/lib/analytics-server';
 
-const SALT = process.env.ANALYTICS_IP_SALT || 'julie-rosali-analytics-v1';
-
-function hashIp(ip: string): string {
-  return createHash('sha256').update(SALT + ip.trim()).digest('hex');
-}
+type SessionRow = {
+  session_id: string;
+  ip_hash: string;
+  ip: string | null;
+  country: string | null;
+  city: string | null;
+  referrer: string | null;
+  browser: string | null;
+  device: string | null;
+  os: string | null;
+  user_agent: string | null;
+  created_at: string;
+};
 
 type Filter = { include?: string[]; exclude?: string[]; excludeHashes?: string[]; excludeBots?: boolean; excludeShortVisits?: boolean };
 
@@ -84,16 +92,21 @@ export async function GET(req: NextRequest) {
     filter.excludeShortVisits = v.excludeShortVisits !== false;
   }
 
-  const { data: sessions, error: sessionsError } = await supabase
-    .from('analytics_sessions')
-    .select('session_id, ip_hash, ip, country, city, referrer, browser, device, os, user_agent, created_at')
-    .eq('is_authenticated', false)
-    .gte('created_at', from)
-    .lte('created_at', to)
-    .order('created_at', { ascending: false });
-
-  if (sessionsError) {
-    return NextResponse.json({ error: sessionsError.message }, { status: 500 });
+  let sessions: SessionRow[];
+  try {
+    sessions = await fetchAll<SessionRow>((rangeFrom, rangeTo) =>
+      supabase
+        .from('analytics_sessions')
+        .select('session_id, ip_hash, ip, country, city, referrer, browser, device, os, user_agent, created_at')
+        .eq('is_authenticated', false)
+        .gte('created_at', from)
+        .lte('created_at', to)
+        .order('created_at', { ascending: false })
+        .order('session_id', { ascending: true })
+        .range(rangeFrom, rangeTo)
+    );
+  } catch (e) {
+    return NextResponse.json({ error: e instanceof Error ? e.message : 'sessions error' }, { status: 500 });
   }
 
   const includeHashes = new Set(
@@ -103,7 +116,7 @@ export async function GET(req: NextRequest) {
     [...(filter.exclude || []).map((ip) => hashIp(ip)), ...(filter.excludeHashes || [])]
   );
 
-  let filtered = (sessions || []).filter((s) => {
+  const filtered =(sessions || []).filter((s) => {
     const h = s.ip_hash as string;
     if (excludeHashes.has(h)) return false;
     if ((filter.include?.length ?? 0) > 0 && !includeHashes.has(h)) return false;
@@ -113,23 +126,20 @@ export async function GET(req: NextRequest) {
 
   const sessionIds = new Set(filtered.map((s) => s.session_id));
 
-  const { data: events, error: eventsError } = await supabase
-    .from('analytics_events')
-    .select('session_id, event_type, path, element_id, duration, created_at')
-    .in('session_id', Array.from(sessionIds));
-
-  if (eventsError) {
-    return NextResponse.json({ error: eventsError.message }, { status: 500 });
+  let eventsList;
+  try {
+    eventsList = await fetchEventsForSessions(supabase, Array.from(sessionIds));
+  } catch (e) {
+    return NextResponse.json({ error: e instanceof Error ? e.message : 'events error' }, { status: 500 });
   }
 
-  const eventsList = events || [];
-  // Filtrer les événements avec durée < 1 seconde si le filtre est actif
-  // On ne garde que les événements avec duration >= 1 (pas ceux sans duration)
-  const filteredEventsList = filter.excludeShortVisits !== false
-    ? eventsList.filter((e) => e.duration != null && e.duration >= 1)
-    : eventsList;
-  const pageviews = filteredEventsList.filter((e) => e.event_type === 'pageview');
-  const clicks = filteredEventsList.filter((e) => e.event_type === 'click');
+  // Filtre « visites courtes » : ne s'applique qu'aux pages vues (< 1 s ou sans durée).
+  // Les clics n'ont pas de durée : ils sont toujours conservés.
+  const allPageviews = eventsList.filter((e) => e.event_type === 'pageview');
+  const pageviews = filter.excludeShortVisits !== false
+    ? allPageviews.filter((e) => e.duration != null && e.duration >= 1)
+    : allPageviews;
+  const clicks = eventsList.filter((e) => e.event_type === 'click');
 
   const uniqueVisitors = filtered.length;
   const totalViews = pageviews.length;
@@ -138,12 +148,11 @@ export async function GET(req: NextRequest) {
     withDuration.length > 0
       ? Math.round(withDuration.reduce((a, p) => a + (p.duration || 0), 0) / withDuration.length)
       : 0;
-  const singlePageVisits = sessionIds.size > 0
-    ? Array.from(sessionIds).filter((sid) => {
-        const count = pageviews.filter((e) => e.session_id === sid).length;
-        return count <= 1;
-      }).length
-    : 0;
+  const pageviewsPerSession: Record<string, number> = {};
+  pageviews.forEach((e) => {
+    pageviewsPerSession[e.session_id] = (pageviewsPerSession[e.session_id] || 0) + 1;
+  });
+  const singlePageVisits = Array.from(sessionIds).filter((sid) => (pageviewsPerSession[sid] || 0) <= 1).length;
   const bounceRate = uniqueVisitors > 0 ? Math.round((singlePageVisits / uniqueVisitors) * 100) : 0;
   const pagesPerVisit =
     uniqueVisitors > 0

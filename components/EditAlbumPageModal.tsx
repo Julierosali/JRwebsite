@@ -45,21 +45,6 @@ export function EditAlbumPageModal({ section, onClose, onSave }: EditAlbumPageMo
     onClose();
   };
 
-  const update = (path: string, value: unknown) => {
-    setContent((prev) => {
-      const next = JSON.parse(JSON.stringify(prev));
-      const keys = path.split('.');
-      let cur: Record<string, unknown> = next;
-      for (let i = 0; i < keys.length - 1; i++) {
-        const k = keys[i];
-        if (typeof cur[k] !== 'object' || cur[k] === null) cur[k] = {};
-        cur = cur[k] as Record<string, unknown>;
-      }
-      cur[keys[keys.length - 1]] = value;
-      return next;
-    });
-  };
-
   /** Écrit dans la locale courante et synchronise les champs partagés (URLs, vidéos) dans l’autre locale. */
   const u = (path: string, value: unknown) => {
     setContent((prev) => {
@@ -107,7 +92,6 @@ export function EditAlbumPageModal({ section, onClose, onSave }: EditAlbumPageMo
   // FR comme base, locale courante par-dessus (merge aussi albumPage)
   const frBlock = (content.fr ?? {}) as Record<string, unknown>;
   const localeBlock = (content[editLocale] ?? {}) as Record<string, unknown>;
-  const block = editLocale === 'fr' ? frBlock : { ...frBlock, ...localeBlock };
   const frAp = (frBlock.albumPage as Record<string, unknown>) ?? {};
   const localeAp = (localeBlock.albumPage as Record<string, unknown>) ?? {};
   const ap = editLocale === 'fr' ? frAp : { ...frAp, ...localeAp };

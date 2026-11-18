@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { SectionWrapper } from '@/components/SectionWrapper';
+import { useAdmin } from '@/context/AdminContext';
 import { SocialIcons } from '@/components/SocialIcons';
 import { StreamingIcons } from '@/components/StreamingIcons';
 import { clampFontSize } from '@/lib/fontSize';
@@ -48,6 +49,7 @@ export function ContactSection({
   const imageUrl = content?.imageUrl ?? '';
   const titlePx = clampFontSize(content?.titleFontSize);
   const textPx = clampFontSize(content?.textFontSize);
+  const { isAdmin } = useAdmin();
 
   return (
     <SectionWrapper
@@ -69,7 +71,7 @@ export function ContactSection({
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="overflow-hidden rounded-xl bg-accent p-8 shadow-xl md:grid md:grid-cols-2 md:gap-8"
+          className={`overflow-hidden rounded-xl bg-accent p-8 shadow-xl ${imageUrl || isAdmin ? 'md:grid md:grid-cols-2 md:gap-8' : ''}`}
           data-block="contact"
         >
           <div>
@@ -109,11 +111,11 @@ export function ContactSection({
                 sizes="(max-width: 768px) 100vw, 50vw"
               />
             </div>
-          ) : (
+          ) : isAdmin ? (
             <div className="mt-6 flex aspect-[4/5] items-center justify-center rounded-lg bg-white/10 md:mt-0">
               <span className="text-white/40">Photo</span>
             </div>
-          )}
+          ) : null}
         </motion.div>
       </div>
     </SectionWrapper>

@@ -77,6 +77,23 @@ html {
   }
 }
 
+/* Réglage système « réduire les animations » : bandeaux figés et défilables à la main */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  [style*="portrait-scroll"],
+  [style*="presse-articles-scroll"],
+  [style*="presse-radios-scroll"] {
+    animation: none !important;
+  }
+  :has(> [style*="portrait-scroll"]),
+  :has(> [style*="presse-articles-scroll"]),
+  :has(> [style*="presse-radios-scroll"]) {
+    overflow-x: auto !important;
+  }
+}
+
 .bg-accent-solid {
   background-color: #6b4e9e;
 }

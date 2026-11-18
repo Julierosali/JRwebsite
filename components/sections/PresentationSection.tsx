@@ -1,8 +1,8 @@
 'use client';
 
 import Image from 'next/image';
-import { motion } from 'framer-motion';
 import { SectionWrapper } from '@/components/SectionWrapper';
+import { useAdmin } from '@/context/AdminContext';
 import { clampFontSize } from '@/lib/fontSize';
 
 type PresentationContent = {
@@ -36,6 +36,8 @@ export function PresentationSection({
   const imageUrl = content?.imageUrl ?? '';
   const titlePx = clampFontSize(content?.titleFontSize);
   const textPx = clampFontSize(content?.textFontSize);
+  const { isAdmin } = useAdmin();
+  const showImageColumn = Boolean(imageUrl) || isAdmin;
 
   return (
     <SectionWrapper
@@ -50,7 +52,7 @@ export function PresentationSection({
       visible={visible}
     >
       <div className="relative mx-auto max-w-6xl px-4 py-12 md:py-20">
-        <div className="overflow-hidden rounded-xl bg-accent shadow-2xl md:grid md:grid-cols-2 md:gap-0" data-block="presentation">
+        <div className={`overflow-hidden rounded-xl bg-accent shadow-2xl ${showImageColumn ? 'md:grid md:grid-cols-2 md:gap-0' : ''}`} data-block="presentation">
           <div className="p-8 md:p-10">
             <h2 className="font-title mb-6 text-3xl font-bold tracking-wide md:text-4xl" style={titlePx != null ? { fontSize: `${titlePx}px` } : undefined}>
               {content?.title ?? "L'UNIVERS"}
@@ -69,11 +71,11 @@ export function PresentationSection({
                 sizes="(max-width: 768px) 100vw, 50vw"
               />
             </div>
-          ) : (
+          ) : isAdmin ? (
             <div className="flex aspect-[4/5] items-center justify-center bg-white/5 md:aspect-auto md:min-h-[400px]">
               <span className="text-white/40">Photo de présentation</span>
             </div>
-          )}
+          ) : null}
         </div>
       </div>
     </SectionWrapper>

@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { SectionWrapper } from '@/components/SectionWrapper';
+import { useAdmin } from '@/context/AdminContext';
 import { clampFontSize } from '@/lib/fontSize';
 
 type PortraitContent = {
@@ -35,6 +36,10 @@ export function PortraitSection({
   const images = content?.images ?? [];
   const scrollSpeed = Math.max(10, Math.min(120, content?.scrollSpeed ?? 40)); // secondes pour un tour (10–120)
   const titlePx = clampFontSize(content?.titleFontSize);
+  const { isAdmin } = useAdmin();
+
+  // Galerie vide : section masquée pour les visiteurs.
+  if (images.length === 0 && !isAdmin) return null;
 
   return (
     <SectionWrapper
@@ -69,7 +74,7 @@ export function PortraitSection({
               }}
             >
               {[...images, ...images].map((img, i) => (
-                <div key={i} className="relative h-full w-80 shrink-0 overflow-hidden md:w-96 lg:w-[26rem]">
+                <div key={i} className="relative h-full w-80 shrink-0 overflow-hidden md:w-96 lg:w-[26rem]" aria-hidden={i >= images.length || undefined}>
                   <Image
                     src={img.url}
                     alt={img.alt ?? `Portrait ${(i % images.length) + 1}`}

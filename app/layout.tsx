@@ -3,7 +3,9 @@ import { Anton, Source_Sans_3, Playfair_Display, Lora } from 'next/font/google';
 import { AdminProvider } from '@/context/AdminContext';
 import { LocaleProvider } from '@/context/LocaleContext';
 import { AnalyticsCollector } from '@/components/AnalyticsCollector';
+import { MotionProvider } from '@/components/MotionProvider';
 import { getSeoSettings } from '@/lib/seo';
+import { getSiteUrl } from '@/lib/site-url';
 import './globals.css';
 
 const anton = Anton({
@@ -36,12 +38,17 @@ const DEFAULT_TITLE =
 const DEFAULT_DESCRIPTION =
   'Julie Rosali, artiste française indépendante. Chanson française, pop émotionnelle et influences latines. Découvrez ses albums et ses concerts.';
 
+/** Les réglages SEO globaux (favicon, titre) sont relus au plus toutes les 60 s. */
+export const revalidate = 60;
+
 export async function generateMetadata(): Promise<Metadata> {
   const globalSeo = await getSeoSettings('_global');
   const desc =
     globalSeo?.meta_description?.trim() || DEFAULT_DESCRIPTION;
   const shortDesc = desc.length > 300 ? desc.slice(0, 297).trimEnd() + '…' : desc;
+  const siteUrl = getSiteUrl();
   return {
+    metadataBase: siteUrl ? new URL(siteUrl) : undefined,
     icons: globalSeo?.favicon_url ? { icon: globalSeo.favicon_url } : undefined,
     title: {
       default: globalSeo?.meta_title?.trim() || DEFAULT_TITLE,
@@ -62,12 +69,14 @@ export default function RootLayout({
   return (
     <html lang="fr" className={`${anton.variable} ${sourceSans.variable} ${playfairDisplay.variable} ${lora.variable}`}>
       <body className="font-body antialiased bg-gradient min-h-screen text-white">
-        <AdminProvider>
-          <LocaleProvider>
-            <AnalyticsCollector />
-            {children}
-          </LocaleProvider>
-        </AdminProvider>
+        <MotionProvider>
+          <AdminProvider>
+            <LocaleProvider>
+              <AnalyticsCollector />
+              {children}
+            </LocaleProvider>
+          </AdminProvider>
+        </MotionProvider>
       </body>
     </html>
   );

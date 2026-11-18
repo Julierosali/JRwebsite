@@ -1,107 +1,93 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabase-server';
-import { createHash } from 'crypto';
+import { hashIp, getClientIp } from '@/lib/analytics-server';
 
-const SALT = process.env.ANALYTICS_IP_SALT || 'julie-rosali-analytics-v1';
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-function hashIp(ip: string): string {
-  return createHash('sha256').update(SALT + ip.trim()).digest('hex');
+function str(value: unknown, max: number): string | null {
+  if (typeof value !== 'string') return null;
+  const s = value.trim();
+  return s ? s.slice(0, max) : null;
 }
 
+/**
+ * Collecte anonyme (sans cookie). L'IP n'est jamais stockée en clair : seul un hash salé est conservé.
+ * Une page vue = une ligne : le client renvoie le même event_id pour mettre à jour la durée.
+ */
 export async function POST(req: NextRequest) {
+  let body: Record<string, unknown>;
   try {
-    const userAgent = req.headers.get('user-agent') ?? '';
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: 'invalid json' }, { status: 400 });
+  }
 
-    const body = await req.json();
-    const {
-      session_id,
-      event_type,
-      path,
-      element_id,
-      duration,
-      referrer,
-      is_authenticated,
-      device,
-      os,
-      browser,
-    } = body;
+  if (body.is_authenticated === true) return NextResponse.json({ ok: true });
 
-    if (is_authenticated === true) {
-      return NextResponse.json({ ok: true }, { status: 200 });
+  const sessionId = str(body.session_id, 36);
+  const eventId = str(body.event_id, 36);
+  const eventType = body.event_type;
+  const path = str(body.path, 500);
+
+  if (!sessionId || !UUID_RE.test(sessionId) || !path) {
+    return NextResponse.json({ error: 'session_id, event_type, path required' }, { status: 400 });
+  }
+  if (eventType !== 'pageview' && eventType !== 'click') {
+    return NextResponse.json({ error: 'invalid event_type' }, { status: 400 });
+  }
+  if (eventId && !UUID_RE.test(eventId)) {
+    return NextResponse.json({ error: 'invalid event_id' }, { status: 400 });
+  }
+
+  const rawDuration = typeof body.duration === 'number' ? Math.round(body.duration) : null;
+  const duration = rawDuration != null && rawDuration >= 0 ? Math.min(rawDuration, 86400) : null;
+
+  const supabase = createServiceRoleClient();
+  if (!supabase) return NextResponse.json({ error: 'Analytics not configured' }, { status: 503 });
+
+  const ip = getClientIp(req.headers);
+  const country = req.headers.get('x-vercel-ip-country') || req.headers.get('cf-ipcountry') || null;
+  const cityRaw = req.headers.get('x-vercel-ip-city');
+  let city: string | null = null;
+  if (cityRaw) {
+    try {
+      city = decodeURIComponent(cityRaw);
+    } catch {
+      city = cityRaw;
     }
+  }
 
-    if (!session_id || !event_type || !path) {
-      return NextResponse.json({ error: 'session_id, event_type, path required' }, { status: 400 });
-    }
-
-    if (!['pageview', 'click'].includes(event_type)) {
-      return NextResponse.json({ error: 'invalid event_type' }, { status: 400 });
-    }
-
-    const ip =
-      req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-      req.headers.get('x-real-ip') ||
-      '';
-    const country = req.headers.get('x-vercel-ip-country') || req.headers.get('cf-ipcountry') || null;
-    const city = req.headers.get('x-vercel-ip-city') || null;
-    const ipHash = ip ? hashIp(ip) : '';
-
-    const supabase = createServiceRoleClient();
-    if (!supabase) {
-      return NextResponse.json({ error: 'Analytics not configured' }, { status: 503 });
-    }
-
-    const sessionRow: Record<string, unknown> = {
-      session_id,
-      ip_hash: ipHash,
+  const { error: sessionError } = await supabase.from('analytics_sessions').upsert(
+    {
+      session_id: sessionId,
+      ip_hash: ip ? hashIp(ip) : '',
       country: country || 'Inconnu',
       city: city || 'Inconnu',
-      referrer: referrer ?? null,
-      browser: browser ?? null,
-      device: device ?? null,
-      os: os ?? null,
-      user_agent: userAgent || null,
+      referrer: str(body.referrer, 500),
+      browser: str(body.browser, 40),
+      device: str(body.device, 40),
+      os: str(body.os, 40),
+      user_agent: str(req.headers.get('user-agent'), 500),
       is_authenticated: false,
       updated_at: new Date().toISOString(),
-    };
-    if (ip) sessionRow.ip = ip;
+    },
+    { onConflict: 'session_id' }
+  );
+  if (sessionError) return NextResponse.json({ error: sessionError.message }, { status: 500 });
 
-    const { error: upsertError } = await supabase.from('analytics_sessions').upsert(sessionRow, {
-      onConflict: 'session_id',
-      ignoreDuplicates: false,
-    });
+  const eventRow = {
+    ...(eventId ? { id: eventId } : {}),
+    session_id: sessionId,
+    event_type: eventType,
+    path,
+    element_id: str(body.element_id, 200),
+    duration,
+  };
 
-    if (upsertError) {
-      const withoutIp = { ...sessionRow };
-      delete withoutIp.ip;
-      const { error: retryError } = await supabase.from('analytics_sessions').upsert(withoutIp, {
-        onConflict: 'session_id',
-        ignoreDuplicates: false,
-      });
-      if (retryError) {
-        return NextResponse.json({ error: retryError.message }, { status: 500 });
-      }
-    }
+  const { error: eventError } = eventId
+    ? await supabase.from('analytics_events').upsert(eventRow, { onConflict: 'id' })
+    : await supabase.from('analytics_events').insert(eventRow);
+  if (eventError) return NextResponse.json({ error: eventError.message }, { status: 500 });
 
-    const eventRow = {
-      session_id,
-      event_type,
-      path,
-      element_id: element_id ?? null,
-      duration: duration ?? null,
-      metadata: {},
-    };
-
-    const { error: insertEventError } = await supabase.from('analytics_events').insert(eventRow);
-    if (insertEventError) {
-      return NextResponse.json({ error: insertEventError.message }, { status: 500 });
-    }
-
-    return NextResponse.json({ ok: true }, { status: 200 });
-  } catch (e) {
-    return NextResponse.json(
-      { error: e instanceof Error ? e.message : 'Server error' },
-      { status: 500 }
-    );
-  }
+  return NextResponse.json({ ok: true });
 }
